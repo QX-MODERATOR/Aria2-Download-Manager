@@ -12,8 +12,7 @@ fi
 TARGET="${TAURI_TARGET:-}"
 BUNDLES="${TAURI_BUNDLES:-app,dmg}"
 BIN_DIR="$ROOT_DIR/src-tauri/bin"
-ICONSET_DIR="$ROOT_DIR/src-tauri/icons/icon.iconset"
-ICNS_OUT="$ROOT_DIR/src-tauri/icons/icon.icns"
+ICNS_PATH="$ROOT_DIR/src-tauri/icons/icon.icns"
 
 mkdir -p "$BIN_DIR"
 
@@ -28,12 +27,14 @@ ensure_tool cargo
 ensure_tool npm
 ensure_tool rustc
 ensure_tool rustup
-ensure_tool iconutil
-ensure_tool sips
-ensure_tool magick
 
 if [[ -z "$TARGET" ]]; then
   TARGET="$(rustc -Vv | awk '/host:/ { print $2 }')"
+fi
+
+if [[ ! -f "$ICNS_PATH" ]]; then
+  echo "Missing macOS icon: src-tauri/icons/icon.icns" >&2
+  exit 1
 fi
 
 copy_system_aria2_for_target() {
@@ -80,21 +81,6 @@ case "$TARGET" in
     exit 1
     ;;
 esac
-
-rm -rf "$ICONSET_DIR"
-mkdir -p "$ICONSET_DIR"
-cp "$ROOT_DIR/src-tauri/icons/16x16.png" "$ICONSET_DIR/icon_16x16.png"
-cp "$ROOT_DIR/src-tauri/icons/32x32.png" "$ICONSET_DIR/icon_16x16@2x.png"
-cp "$ROOT_DIR/src-tauri/icons/32x32.png" "$ICONSET_DIR/icon_32x32.png"
-cp "$ROOT_DIR/src-tauri/icons/64x64.png" "$ICONSET_DIR/icon_32x32@2x.png"
-cp "$ROOT_DIR/src-tauri/icons/128x128.png" "$ICONSET_DIR/icon_128x128.png"
-cp "$ROOT_DIR/src-tauri/icons/128x128@2x.png" "$ICONSET_DIR/icon_128x128@2x.png"
-magick -background none "$ROOT_DIR/src-tauri/icon-master.svg" -resize 256x256 -depth 8 -define png:color-type=6 "$ICONSET_DIR/icon_256x256.png"
-magick -background none "$ROOT_DIR/src-tauri/icon-master.svg" -resize 512x512 -depth 8 -define png:color-type=6 "$ICONSET_DIR/icon_256x256@2x.png"
-cp "$ICONSET_DIR/icon_256x256@2x.png" "$ICONSET_DIR/icon_512x512.png"
-magick -background none "$ROOT_DIR/src-tauri/icon-master.svg" -resize 1024x1024 -depth 8 -define png:color-type=6 "$ICONSET_DIR/icon_512x512@2x.png"
-iconutil -c icns "$ICONSET_DIR" -o "$ICNS_OUT"
-rm -rf "$ICONSET_DIR"
 
 if [[ "$TARGET" == "universal-apple-darwin" ]]; then
   cargo build --release --manifest-path "$ROOT_DIR/src-tauri/Cargo.toml" --target aarch64-apple-darwin

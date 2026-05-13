@@ -61,7 +61,7 @@ src-tauri/target/release/bundle/msi/*.msi
 
 ```bash
 xcode-select --install
-brew install node aria2 imagemagick
+brew install node aria2
 ```
 
 Native builds use the current Rust host target. Universal build setup:
@@ -123,6 +123,6 @@ src-tauri/target/release/bundle/rpm/*.rpm
 ## Troubleshooting
 
 - Missing aria2 sidecar: place the correct binary in src-tauri/bin for your target.
-- macOS icon generation fails: ensure ImageMagick (magick) is installed.
+- macOS icon missing: ensure `src-tauri/icons/icon.icns` exists.
 - Linux rpm build fails: install rpmbuild or set TAURI_BUNDLES=appimage,deb.
 - WebView2 not found on Windows: install the WebView2 runtime from Microsoft.
