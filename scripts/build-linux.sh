@@ -15,6 +15,8 @@ HOST_TRIPLE="$(rustc -Vv | awk '/host:/ { print $2 }')"
 SIDECAR="$BIN_DIR/aria2c-$HOST_TRIPLE"
 
 mkdir -p "$BIN_DIR"
+echo "Building Linux bundles: $BUNDLES"
+echo "Rust host triple: $HOST_TRIPLE"
 
 for tool in cargo npm rustc; do
   if ! command -v "$tool" >/dev/null 2>&1; then
@@ -25,6 +27,7 @@ done
 
 if [[ ! -f "$SIDECAR" ]]; then
   if command -v aria2c >/dev/null 2>&1; then
+    echo "Copying aria2 sidecar to src-tauri/bin/aria2c-$HOST_TRIPLE"
     cp "$(command -v aria2c)" "$SIDECAR"
   else
     echo "Missing aria2 sidecar: $SIDECAR" >&2
@@ -39,7 +42,10 @@ if [[ "$BUNDLES" == *rpm* ]] && ! command -v rpmbuild >/dev/null 2>&1; then
   exit 1
 fi
 
+echo "Compiling Rust release binary..."
 cargo build --release
+
+echo "Building Tauri Linux bundles..."
 npm run tauri -- build --bundles "$BUNDLES"
 
 echo "Linux bundles:"
