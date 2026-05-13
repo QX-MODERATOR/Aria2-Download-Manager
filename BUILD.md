@@ -64,7 +64,7 @@ xcode-select --install
 brew install node aria2 imagemagick
 ```
 
-Universal build setup:
+Native builds use the current Rust host target. Universal build setup:
 
 ```bash
 rustup target add aarch64-apple-darwin x86_64-apple-darwin
@@ -76,6 +76,8 @@ rustup target add aarch64-apple-darwin x86_64-apple-darwin
 npm install
 ./scripts/build-macos.sh
 ```
+
+To build a universal macOS bundle, set `TAURI_TARGET=universal-apple-darwin`.
 
 Artifacts:
 

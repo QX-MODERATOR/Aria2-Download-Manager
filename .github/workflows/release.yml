@@ -86,21 +86,13 @@ jobs:
 
   macos:
     name: Build macOS bundle
-    strategy:
-      fail-fast: true
-      matrix:
-        include:
-          - os: macos-13
-            target: x86_64-apple-darwin
-    runs-on: ${{ matrix.os }}
+    runs-on: macos-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: ${{ matrix.target }}
 
       - name: Cache Rust builds
         uses: Swatinem/rust-cache@v2
@@ -131,14 +123,12 @@ jobs:
 
       - name: Build macOS bundles
         env:
-          TAURI_TARGET: ${{ matrix.target }}
           TAURI_BUNDLES: app,dmg
         run: bash ./scripts/build-macos.sh
 
       - name: Collect macOS release assets
-        env:
-          TAURI_TARGET: ${{ matrix.target }}
         run: |
+          TAURI_TARGET="$(rustc -Vv | awk '/host:/ { print $2 }')"
           mkdir -p release-assets
           find "src-tauri/target/$TAURI_TARGET/release/bundle/dmg" -name "*.dmg" -type f -exec cp {} release-assets/ \;
           app_path="$(find "src-tauri/target/$TAURI_TARGET/release/bundle/macos" -maxdepth 1 -name "*.app" -type d | head -n 1)"
@@ -152,7 +142,7 @@ jobs:
       - name: Upload macOS release assets
         uses: actions/upload-artifact@v4
         with:
-          name: macos-${{ matrix.target }}-bundle
+          name: macos-bundle
           path: release-assets/*
           if-no-files-found: error
 

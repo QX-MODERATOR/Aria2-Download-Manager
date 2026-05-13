@@ -9,7 +9,7 @@ if [[ "$(uname -s)" != "Darwin" ]]; then
   exit 1
 fi
 
-TARGET="${TAURI_TARGET:-universal-apple-darwin}"
+TARGET="${TAURI_TARGET:-}"
 BUNDLES="${TAURI_BUNDLES:-app,dmg}"
 BIN_DIR="$ROOT_DIR/src-tauri/bin"
 ICONSET_DIR="$ROOT_DIR/src-tauri/icons/icon.iconset"
@@ -26,10 +26,15 @@ ensure_tool() {
 
 ensure_tool cargo
 ensure_tool npm
+ensure_tool rustc
 ensure_tool rustup
 ensure_tool iconutil
 ensure_tool sips
 ensure_tool magick
+
+if [[ -z "$TARGET" ]]; then
+  TARGET="$(rustc -Vv | awk '/host:/ { print $2 }')"
+fi
 
 copy_system_aria2_for_target() {
   local triple="$1"
