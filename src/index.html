@@ -1,0 +1,2010 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Aria2 Download Manager</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+/* ── Reset ─────────────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg-void:      #040609;
+  --bg-deep:      #070A10;
+  --bg-panel:     #0B0F18;
+  --bg-card:      #0D1220;
+  --bg-card-h:    #101626;
+  --bg-input:     #131B2E;
+  --border:       #1A2440;
+  --border-glow:  #2A4080;
+  --border-focus: #3D7FFF;
+  --accent:       #3D7FFF;
+  --accent-h:     #5592FF;
+  --accent-dim:   #0D1F4D;
+  --accent-glow:  rgba(61,127,255,0.25);
+  --cyan:         #00D4FF;
+  --cyan-dim:     rgba(0,212,255,0.12);
+  --danger:       #FF3355;
+  --danger-dim:   rgba(255,51,85,0.12);
+  --success:      #00E87A;
+  --success-dim:  rgba(0,232,122,0.12);
+  --warning:      #FFB800;
+  --retry:        #BF7FFF;
+  --text-hi:      #E8F0FF;
+  --text-mid:     #6A7F9A;
+  --text-lo:      #2E3D55;
+  --grid-line:    rgba(61,127,255,0.04);
+  --scan-line:    rgba(61,127,255,0.015);
+}
+
+html, body {
+  height: 100%;
+  background: var(--bg-void);
+  color: var(--text-hi);
+  font-family: 'JetBrains Mono', 'Courier New', monospace;
+  font-size: 12px;
+  overflow: hidden;
+}
+
+@media (max-width: 600px) {
+  html, body { font-size: 11px; overflow: auto; }
+}
+
+/* ── Canvas background ─────────────────────────────────────────────────── */
+#bg-canvas {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* ── Grid overlay ──────────────────────────────────────────────────────── */
+#bg-grid {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(var(--grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+  background-size: 40px 40px;
+  animation: grid-drift 30s linear infinite;
+}
+@keyframes grid-drift {
+  from { background-position: 0 0; }
+  to   { background-position: 40px 40px; }
+}
+
+/* Scan-line effect */
+#bg-scan {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    var(--scan-line) 2px,
+    var(--scan-line) 4px
+  );
+}
+
+/* ── App shell ─────────────────────────────────────────────────────────── */
+#app {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px 20px;
+  height: 100vh;
+  overflow: hidden;
+}
+
+@media (max-width: 600px) {
+  #app {
+    height: auto;
+    min-height: 100vh;
+    overflow: visible;
+    padding: 12px;
+    gap: 8px;
+  }
+}
+
+/* ── 3D Card base ──────────────────────────────────────────────────────── */
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 13px 16px;
+  position: relative;
+  overflow: hidden;
+  transform-style: preserve-3d;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease, transform 0.2s ease;
+  will-change: transform;
+}
+.card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(135deg, rgba(61,127,255,0.04) 0%, transparent 60%);
+  pointer-events: none;
+}
+.card::after {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(61,127,255,0.4), transparent);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+.card:hover::after { opacity: 1; }
+.card:hover {
+  border-color: var(--border-glow);
+  box-shadow: 0 0 30px rgba(61,127,255,0.06), 0 8px 32px rgba(0,0,0,0.4);
+  transform: perspective(1000px) translateZ(2px);
+}
+
+@media (max-width: 600px) {
+  .card { padding: 10px 12px; border-radius: 8px; }
+  .card:hover { transform: none; }
+}
+
+/* ── Section label ─────────────────────────────────────────────────────── */
+.sec-label {
+  font-size: 9px;
+  color: var(--text-lo);
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+  font-family: 'Orbitron', monospace;
+}
+
+/* ── Header ────────────────────────────────────────────────────────────── */
+#header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+  padding: 4px 0;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 480px) {
+  #header { gap: 8px; }
+  .title-block h1 { font-size: 12px; letter-spacing: 2px; }
+  .title-block p { font-size: 9px; }
+  #aria2-badge { font-size: 9px; padding: 4px 9px; }
+}
+
+/* Animated logo mark */
+.logo-mark {
+  width: 36px;
+  height: 36px;
+  position: relative;
+  flex-shrink: 0;
+}
+.logo-mark svg {
+  width: 100%;
+  height: 100%;
+  animation: logo-spin 8s linear infinite;
+}
+@keyframes logo-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+.logo-mark .inner-dot {
+  position: absolute;
+  inset: 30%;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 10px var(--accent), 0 0 20px rgba(61,127,255,0.5);
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+@keyframes pulse-dot {
+  0%,100% { transform: scale(1); opacity: 1; }
+  50%      { transform: scale(1.3); opacity: 0.7; }
+}
+
+.title-block { flex: 1; }
+.title-block h1 {
+  font-family: 'Orbitron', monospace;
+  font-size: 15px;
+  font-weight: 900;
+  letter-spacing: 4px;
+  background: linear-gradient(90deg, #5592FF, #00D4FF, #5592FF);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: text-shimmer 4s linear infinite;
+}
+@keyframes text-shimmer {
+  from { background-position: 0% center; }
+  to   { background-position: 200% center; }
+}
+.title-block p {
+  font-size: 10px;
+  color: var(--text-lo);
+  margin-top: 3px;
+  letter-spacing: 1px;
+}
+
+#aria2-badge {
+  font-size: 10px;
+  font-weight: bold;
+  letter-spacing: 1px;
+  padding: 5px 12px;
+  border-radius: 20px;
+  border: 1px solid;
+  transition: all 0.3s ease;
+  font-family: 'Orbitron', monospace;
+}
+#aria2-badge.ok {
+  color: var(--success);
+  border-color: rgba(0,232,122,0.3);
+  background: var(--success-dim);
+  box-shadow: 0 0 12px rgba(0,232,122,0.15);
+  animation: badge-breathe 3s ease-in-out infinite;
+}
+#aria2-badge.err {
+  color: var(--danger);
+  border-color: rgba(255,51,85,0.3);
+  background: var(--danger-dim);
+}
+@keyframes badge-breathe {
+  0%,100% { box-shadow: 0 0 12px rgba(0,232,122,0.15); }
+  50%      { box-shadow: 0 0 20px rgba(0,232,122,0.3); }
+}
+
+/* ── URL card ──────────────────────────────────────────────────────────── */
+.url-row { display: flex; gap: 8px; align-items: stretch; }
+
+@media (max-width: 540px) {
+  .url-row { flex-wrap: wrap; }
+  #url-input { flex-basis: 100%; min-width: 0; }
+  .btn-primary, .btn-danger { flex: 1; min-width: 0; padding: 10px 8px; font-size: 10px; }
+}
+
+#url-input {
+  flex: 1;
+  background: var(--bg-input);
+  color: var(--text-hi);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 11px 14px;
+  font-size: 12px;
+  font-family: 'JetBrains Mono', monospace;
+  outline: none;
+  transition: border-color 0.25s, box-shadow 0.25s, background 0.25s;
+}
+/* url-input:focus defined below with pulse animation */
+#url-input::placeholder { color: var(--text-lo); }
+
+.btn-primary {
+  background: linear-gradient(135deg, #2A5FCC 0%, #3D7FFF 50%, #2A5FCC 100%);
+  background-size: 200% auto;
+  color: #fff;
+  border: 1px solid rgba(93,146,255,0.4);
+  border-radius: 8px;
+  padding: 11px 20px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  cursor: pointer;
+  min-width: 130px;
+  font-family: 'Orbitron', monospace;
+  transition: all 0.25s ease;
+  white-space: nowrap;
+  position: relative;
+  overflow: hidden;
+}
+.btn-primary::after {
+  content: '';
+  position: absolute;
+  top: -50%; left: -60%;
+  width: 30%; height: 200%;
+  background: rgba(255,255,255,0.12);
+  transform: skewX(-25deg);
+  transition: left 0.4s ease;
+}
+.btn-primary:hover { background-position: right center; box-shadow: 0 0 20px rgba(61,127,255,0.4), 0 4px 12px rgba(0,0,0,0.3); }
+.btn-primary:hover::after { left: 160%; }
+.btn-primary:active { transform: scale(0.97); }
+.btn-primary:disabled {
+  background: #0D1A35;
+  border-color: var(--border);
+  color: var(--text-lo);
+  cursor: default;
+  box-shadow: none;
+}
+
+.btn-danger {
+  background: transparent;
+  color: var(--danger);
+  border: 1px solid rgba(255,51,85,0.35);
+  border-radius: 8px;
+  padding: 11px 20px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  cursor: pointer;
+  min-width: 120px;
+  font-family: 'Orbitron', monospace;
+  transition: all 0.25s ease;
+  white-space: nowrap;
+}
+.btn-danger:hover {
+  background: rgba(255,51,85,0.12);
+  border-color: var(--danger);
+  box-shadow: 0 0 16px rgba(255,51,85,0.25);
+}
+.btn-danger:active { transform: scale(0.97); }
+.btn-danger:disabled { border-color: var(--border); color: var(--text-lo); cursor: default; box-shadow: none; }
+
+/* ── Strategy card ─────────────────────────────────────────────────────── */
+#strategy-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 16px;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 540px) {
+  #strategy-card { gap: 8px; padding: 8px 12px; }
+  #strat-desc { font-size: 10px; flex-basis: 100%; }
+}
+.strat-hdr {
+  font-size: 9px;
+  color: var(--text-lo);
+  letter-spacing: 2px;
+  font-family: 'Orbitron', monospace;
+  width: 68px;
+  flex-shrink: 0;
+}
+.badge {
+  background: var(--accent-dim);
+  color: var(--accent-h);
+  border: 1px solid rgba(61,127,255,0.3);
+  border-radius: 4px;
+  padding: 3px 10px;
+  font-size: 9px;
+  letter-spacing: 1px;
+  white-space: nowrap;
+  font-family: 'Orbitron', monospace;
+  transition: all 0.3s ease;
+}
+.badge.retry-mode {
+  background: rgba(191,127,255,0.08);
+  color: var(--retry);
+  border-color: rgba(191,127,255,0.35);
+  box-shadow: 0 0 10px rgba(191,127,255,0.15);
+  animation: retry-pulse 1.5s ease-in-out infinite;
+}
+@keyframes retry-pulse {
+  0%,100% { box-shadow: 0 0 8px rgba(191,127,255,0.15); }
+  50%      { box-shadow: 0 0 18px rgba(191,127,255,0.35); }
+}
+#strat-desc { flex: 1; font-size: 11px; color: var(--text-mid); }
+.attempt-hdr { font-size: 9px; color: var(--text-lo); letter-spacing: 2px; font-family: 'Orbitron', monospace; }
+#attempt-num { color: var(--accent); font-weight: bold; font-size: 13px; }
+
+/* ── Session strip ─────────────────────────────────────────────────────── */
+#session-strip {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 10px 14px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  position: relative;
+  overflow: hidden;
+  transition: border-color 0.3s ease;
+}
+
+@media (max-width: 480px) {
+  #session-strip { gap: 8px; padding: 8px 12px; }
+  #phase-label { min-width: 80px; font-size: 10px; }
+  #mode-line { font-size: 10px; }
+}
+#session-strip::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 3px;
+  background: var(--accent);
+  transition: background 0.3s ease, box-shadow 0.3s ease;
+  border-radius: 0 2px 2px 0;
+}
+#session-strip.active::before {
+  background: var(--cyan);
+  box-shadow: 0 0 12px var(--cyan);
+  animation: strip-pulse 1.5s ease-in-out infinite;
+}
+#session-strip.done::before { background: var(--success); box-shadow: 0 0 12px var(--success); }
+#session-strip.fail::before { background: var(--danger);  box-shadow: 0 0 12px var(--danger); }
+@keyframes strip-pulse {
+  0%,100% { opacity: 1; }
+  50%      { opacity: 0.5; }
+}
+
+#phase-icon {
+  font-size: 17px;
+  width: 26px;
+  text-align: center;
+  transition: transform 0.4s cubic-bezier(0.34,1.56,0.64,1), opacity 0.2s ease;
+}
+#phase-icon.spin { animation: icon-spin 1s ease-in-out infinite; }
+@keyframes icon-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+#phase-label {
+  font-size: 12px;
+  font-weight: bold;
+  letter-spacing: 2px;
+  color: var(--text-mid);
+  min-width: 110px;
+  font-family: 'Orbitron', monospace;
+  transition: color 0.3s ease;
+}
+
+#mode-line { flex: 1; font-size: 11px; color: var(--text-mid); }
+#mode-line .mode-tag { color: var(--accent-h); font-weight: bold; transition: color 0.3s ease; }
+
+#current-file {
+  flex-basis: 100%;
+  font-size: 11px;
+  color: var(--text-lo);
+  padding-top: 6px;
+  border-top: 1px solid var(--border);
+  margin-top: 2px;
+  word-break: break-all;
+  transition: color 0.2s ease;
+}
+#current-file .fn { color: var(--text-hi); }
+
+/* ── Stats ─────────────────────────────────────────────────────────────── */
+#stats-card {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 8px;
+}
+
+@media (max-width: 600px) {
+  #stats-card {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 380px) {
+  #stats-card {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.stat-box {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 9px 10px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease, transform 0.2s ease;
+  cursor: default;
+}
+.stat-box::before {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--accent), transparent);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+.stat-box:hover { border-color: var(--border-glow); transform: perspective(500px) translateZ(4px) translateY(-1px); }
+.stat-box:hover::before { opacity: 1; }
+.stat-box.active { border-color: rgba(61,127,255,0.25); }
+
+@media (max-width: 600px) {
+  .stat-box:hover { transform: none; }
+}
+
+.stat-v {
+  font-weight: bold;
+  font-size: 12px;
+  color: var(--text-hi);
+  transition: color 0.3s ease, transform 0.15s ease;
+  font-family: 'JetBrains Mono', monospace;
+}
+.stat-v.flash { animation: stat-flash 0.35s ease; }
+@keyframes stat-flash {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(1.12); color: var(--cyan); }
+  100% { transform: scale(1); }
+}
+.stat-k {
+  font-size: 8px;
+  color: var(--text-lo);
+  letter-spacing: 2px;
+  margin-top: 3px;
+  font-family: 'Orbitron', monospace;
+}
+
+/* ── Completion banner ─────────────────────────────────────────────────── */
+#completion-banner {
+  display: none;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 1px solid;
+  font-size: 11px;
+  font-weight: bold;
+  letter-spacing: 1px;
+  animation: banner-slide-in 0.4s cubic-bezier(0.34,1.56,0.64,1);
+  font-family: 'Orbitron', monospace;
+}
+@keyframes banner-slide-in {
+  from { opacity: 0; transform: translateY(-8px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+#completion-banner.show { display: flex; }
+#completion-banner.ok {
+  border-color: rgba(0,232,122,0.3);
+  background: var(--success-dim);
+  color: var(--success);
+  box-shadow: 0 0 20px rgba(0,232,122,0.1);
+}
+#completion-banner.err {
+  border-color: rgba(255,51,85,0.3);
+  background: var(--danger-dim);
+  color: var(--danger);
+  box-shadow: 0 0 20px rgba(255,51,85,0.1);
+}
+
+/* ── Progress ──────────────────────────────────────────────────────────── */
+.prog-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+/* pct-label is defined below with enhanced glow */
+
+#progress-bar-wrap {
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  height: 12px;
+  overflow: visible;
+  position: relative;
+}
+/* Track glow */
+#progress-bar-wrap::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+  box-shadow: 0 0 12px var(--accent-glow);
+  transition: opacity 0.4s ease;
+}
+#progress-bar-wrap.glowing::after { opacity: 1; }
+
+#progress-bar {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #1A4DCC 0%, #3D7FFF 50%, #00D4FF 100%);
+  border-radius: 5px;
+  transition: width 0.45s cubic-bezier(0.22,1,0.36,1);
+  position: relative;
+  overflow: hidden;
+}
+/* Shimmer on progress bar */
+#progress-bar::after {
+  content: '';
+  position: absolute;
+  top: 0; left: -40%;
+  width: 30%; height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+  animation: bar-shimmer 2s ease-in-out infinite;
+}
+@keyframes bar-shimmer {
+  from { left: -40%; }
+  to   { left: 120%; }
+}
+/* Leading glow dot */
+#progress-bar::before {
+  content: '';
+  position: absolute;
+  top: 50%; right: 0;
+  transform: translate(50%, -50%);
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 8px var(--cyan), 0 0 16px var(--accent);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+#progress-bar.has-progress::before { opacity: 1; }
+
+#progress-bar.indeterminate {
+  width: 100% !important;
+  background: linear-gradient(90deg, transparent, var(--accent), var(--cyan), transparent);
+  background-size: 200% auto;
+  animation: indet-slide 1.5s linear infinite;
+}
+@keyframes indet-slide {
+  from { background-position: 200% center; }
+  to   { background-position: -200% center; }
+}
+
+/* ── Mini sparkline ────────────────────────────────────────────────────── */
+#sparkline-wrap {
+  margin-top: 8px;
+  height: 28px;
+  position: relative;
+}
+#sparkline {
+  width: 100%; height: 100%;
+}
+
+/* ── Log card ──────────────────────────────────────────────────────────── */
+#log-card {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+@media (max-width: 600px) {
+  #log-card { flex: none; min-height: 200px; }
+  #log { max-height: 200px; }
+}
+.log-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  gap: 8px;
+}
+
+.log-top-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+.btn-sm {
+  background: transparent;
+  color: var(--text-lo);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 3px 10px;
+  font-size: 10px;
+  cursor: pointer;
+  font-family: 'Orbitron', monospace;
+  letter-spacing: 1px;
+  transition: color 0.2s, border-color 0.2s, box-shadow 0.2s;
+}
+.btn-sm:hover { color: var(--text-mid); border-color: var(--text-mid); box-shadow: 0 0 8px rgba(106,127,154,0.2); }
+
+#log {
+  flex: 1;
+  background: #050810;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  overflow-y: auto;
+  font-size: 11px;
+  line-height: 1.6;
+  white-space: normal;
+  word-break: normal;
+  position: relative;
+}
+/* CRT corner glow */
+#log::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: inset 0 0 30px rgba(0,0,0,0.6);
+  pointer-events: none;
+}
+
+/* Log viewport + virtualization */
+#log-viewport {
+  position: relative;
+  min-height: 100%;
+}
+#log-spacer {
+  width: 100%;
+  height: 0;
+}
+#log-rows {
+  position: relative;
+  left: 0;
+  right: 0;
+  top: 0;
+}
+
+/* Empty state */
+#log-empty {
+  position: absolute;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-lo);
+  font-size: 11px;
+  letter-spacing: 0.5px;
+}
+#log.empty #log-empty {
+  display: flex;
+}
+
+/* Log rows */
+.log-row {
+  display: grid;
+  grid-template-columns: 60px 16px 1fr;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 6px;
+  border-radius: 6px;
+  opacity: 0.94;
+  transition: background 0.2s ease, opacity 0.2s ease, transform 0.2s ease;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  contain: content;
+  will-change: transform;
+  position: absolute;
+  left: 0;
+  right: 0;
+}
+.log-row:hover {
+  background: rgba(61,127,255,0.06);
+  opacity: 1;
+}
+.log-row.compact .log-details { display: none; }
+
+.log-ts {
+  color: #2A3D55;
+  font-size: 10px;
+  user-select: none;
+}
+.log-icon {
+  font-size: 12px;
+  text-align: center;
+}
+.log-title {
+  color: inherit;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.log-details {
+  color: var(--text-mid);
+  margin-left: 6px;
+}
+
+.log-group {
+  color: var(--text-lo);
+  font-size: 9px;
+  letter-spacing: 1px;
+  margin-right: 6px;
+  text-transform: uppercase;
+}
+
+.log-row.grouped {
+  border-left: 2px solid rgba(61,127,255,0.15);
+  padding-left: 10px;
+}
+.log-row.group-start {
+  border-left-color: rgba(61,127,255,0.5);
+}
+
+/* Categories */
+.log-row.cat-success { color: var(--success); }
+.log-row.cat-warn { color: var(--warning); }
+.log-row.cat-info { color: var(--accent); }
+.log-row.cat-error { color: var(--danger); }
+.log-row.cat-network { color: var(--cyan); }
+.log-row.cat-progress { color: var(--accent); }
+
+/* Entry animation */
+.log-row.appear {
+  animation: log-appear 0.2s ease;
+}
+@keyframes log-appear {
+  from { opacity: 0; transform: translateX(-4px); }
+  to   { opacity: 0.94; transform: translateX(0); }
+}
+
+/* Compact mode on log container */
+#log.compact .log-details { display: none; }
+
+/* ── Input focus glow ring enhancement ───────────────────────────────── */
+#url-input:focus {
+  border-color: var(--border-focus);
+  background: #121A30;
+  box-shadow: 0 0 0 3px rgba(61,127,255,0.12), inset 0 1px 0 rgba(61,127,255,0.1);
+  animation: input-glow-pulse 2s ease-in-out infinite;
+}
+@keyframes input-glow-pulse {
+  0%,100% { box-shadow: 0 0 0 3px rgba(61,127,255,0.10), inset 0 1px 0 rgba(61,127,255,0.08); }
+  50%      { box-shadow: 0 0 0 4px rgba(61,127,255,0.20), inset 0 1px 0 rgba(61,127,255,0.15); }
+}
+
+/* ── Stat box icon labels ─────────────────────────────────────────────── */
+.stat-box .stat-icon {
+  font-size: 9px;
+  position: absolute;
+  top: 5px; right: 7px;
+  opacity: 0.3;
+  transition: opacity 0.2s;
+  pointer-events: none;
+}
+.stat-box:hover .stat-icon { opacity: 0.6; }
+
+/* ── Progress label glow ─────────────────────────────────────────────── */
+#pct-label {
+  color: var(--accent);
+  font-weight: bold;
+  font-size: 13px;
+  font-family: 'Orbitron', monospace;
+  transition: color 0.3s ease, text-shadow 0.3s ease;
+  min-width: 40px;
+  text-align: right;
+}
+#pct-label[data-full="true"] { text-shadow: 0 0 12px var(--success); }
+
+/* ── Scrollbar global (Firefox) ──────────────────────────────────────── */
+* { scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
+
+/* ── Completion banner icon animation ────────────────────────────────── */
+#completion-banner.ok #completion-icon {
+  animation: banner-icon-pop 0.5s cubic-bezier(0.34,1.56,0.64,1);
+}
+@keyframes banner-icon-pop {
+  from { transform: scale(0) rotate(-180deg); }
+  to   { transform: scale(1) rotate(0deg); }
+}
+
+/* ── Responsive progress text ────────────────────────────────────────── */
+@media (max-width: 480px) {
+  .prog-top { margin-bottom: 8px; }
+  #sparkline-wrap { height: 22px; }
+}
+
+/* ── Session strip animation enhancement ─────────────────────────────── */
+#session-strip.active {
+  background: linear-gradient(90deg, rgba(0,212,255,0.02), transparent);
+}
+#session-strip.done {
+  background: linear-gradient(90deg, rgba(0,232,122,0.02), transparent);
+}
+#session-strip.fail {
+  background: linear-gradient(90deg, rgba(255,51,85,0.02), transparent);
+}
+
+
+/* ── Status bar ────────────────────────────────────────────────────────── */
+#statusbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-shrink: 0;
+  padding: 0 4px;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+@media (max-width: 480px) {
+  #statusbar { padding-bottom: 12px; }
+  #status-text { font-size: 10px; }
+  #dir-label { font-size: 9px; }
+}
+#status-text {
+  font-size: 11px;
+  transition: color 0.3s ease;
+  letter-spacing: 0.5px;
+}
+#status-text.idle  { color: var(--text-mid); }
+#status-text.dl    { color: var(--accent); }
+#status-text.retry { color: var(--retry); }
+#status-text.ok    { color: var(--success); }
+#status-text.err   { color: var(--danger); }
+#status-text::before { content: '> '; color: var(--text-lo); }
+
+#dir-label { font-size: 10px; color: var(--text-lo); }
+
+/* ── Particles (injected by JS) ────────────────────────────────────────── */
+.particle {
+  position: fixed;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 0;
+  animation: particle-float linear forwards;
+}
+@keyframes particle-float {
+  0%   { opacity: 0; transform: translateY(0) scale(0); }
+  10%  { opacity: 0.6; transform: translateY(-10px) scale(1); }
+  90%  { opacity: 0.3; }
+  100% { opacity: 0; transform: translateY(-120px) scale(0.5); }
+}
+
+/* ── Dialog overlay ────────────────────────────────────────────────────── */
+#dialog-overlay {
+  display: none;
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.75);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  z-index: 100;
+  justify-content: center;
+  align-items: center;
+}
+#dialog-overlay.open { display: flex; animation: overlay-in 0.2s ease; }
+@keyframes overlay-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.dialog {
+  background: var(--bg-card);
+  border: 1px solid var(--border-glow);
+  border-radius: 14px;
+  padding: 28px 32px;
+  min-width: 340px;
+  max-width: 500px;
+  width: 90%;
+  position: relative;
+  overflow: hidden;
+  animation: dialog-in 0.3s cubic-bezier(0.34,1.56,0.64,1);
+  box-shadow: 0 0 60px rgba(0,0,0,0.6), 0 0 30px rgba(61,127,255,0.08);
+}
+
+@media (max-width: 480px) {
+  .dialog { min-width: unset; padding: 20px 18px; border-radius: 10px; }
+  .dialog-btns { flex-wrap: wrap; }
+  .dialog-btns button { flex: 1; }
+}
+.dialog::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--accent), var(--cyan), transparent);
+}
+@keyframes dialog-in {
+  from { opacity: 0; transform: scale(0.94) translateY(8px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+.dialog h2 { font-size: 14px; margin-bottom: 12px; font-family: 'Orbitron', monospace; letter-spacing: 2px; }
+.dialog p  { color: var(--text-mid); font-size: 12px; line-height: 1.7; white-space: pre-wrap; }
+.dialog-btns { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
+.dialog-btns button {
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 20px;
+  font-family: 'Orbitron', monospace;
+  font-size: 11px;
+  letter-spacing: 1px;
+  cursor: pointer;
+  min-width: 70px;
+  transition: all 0.2s ease;
+}
+.dialog-btns button:hover { background: var(--accent-h); box-shadow: 0 0 16px rgba(61,127,255,0.4); }
+.dialog-btns button:active { transform: scale(0.97); }
+.dialog-btns button.secondary {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-mid);
+  box-shadow: none;
+}
+.dialog-btns button.secondary:hover { border-color: var(--text-mid); color: var(--text-hi); box-shadow: none; }
+</style>
+</head>
+<body>
+
+<!-- Background layers -->
+<canvas id="bg-canvas"></canvas>
+<div id="bg-grid"></div>
+<div id="bg-scan"></div>
+
+<div id="app">
+
+  <!-- Header -->
+  <div id="header">
+    <div class="logo-mark">
+      <svg viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="18" cy="18" r="16" stroke="#3D7FFF" stroke-width="0.5" stroke-dasharray="3 5" opacity="0.6"/>
+        <circle cx="18" cy="18" r="11" stroke="#00D4FF" stroke-width="0.5" stroke-dasharray="2 3" opacity="0.4"/>
+        <polygon points="18,4 32,28 4,28" fill="none" stroke="#3D7FFF" stroke-width="0.8" opacity="0.3"/>
+      </svg>
+      <div class="inner-dot"></div>
+    </div>
+    <div class="title-block">
+      <h1>ARIA2 DOWNLOAD MANAGER</h1>
+      <p id="header-sub">v2.0.0 · aria2 engine · loading…</p>
+    </div>
+    <span id="aria2-badge" class="ok">● ARIA2 OK</span>
+  </div>
+
+  <!-- URL card -->
+  <div class="card">
+    <div class="sec-label">TARGET URL</div>
+    <div class="url-row">
+      <input id="url-input" type="text" placeholder="Paste URL here  (http / https / ftp)…" />
+      <button class="btn-primary" id="btn-dl" onclick="onDownload()">⬇ DOWNLOAD</button>
+      <button class="btn-danger"  id="btn-stop" disabled onclick="onStop()">✕ CANCEL</button>
+    </div>
+  </div>
+
+  <!-- Strategy card -->
+  <div class="card" id="strategy-card">
+    <span class="strat-hdr">STRATEGY</span>
+    <span class="badge" id="strat-badge">Default</span>
+    <span id="strat-desc">Standard aria2 — no custom headers</span>
+    <span class="attempt-hdr">ATTEMPT</span>
+    <span id="attempt-num">—</span>
+  </div>
+
+  <!-- Live session -->
+  <div id="session-strip">
+    <span id="phase-icon">○</span>
+    <span id="phase-label">IDLE</span>
+    <div id="mode-line">Mode: <span class="mode-tag" id="mode-tag">Default</span> · <span id="attempt-inline">—</span></div>
+    <div id="current-file">File: <span class="fn" id="fname-display">—</span></div>
+  </div>
+
+  <!-- Stats card -->
+  <div id="stats-card">
+    <div class="stat-box" id="sb-speed"><span class="stat-icon">⚡</span><div class="stat-v" id="s-speed">—</div><div class="stat-k">SPEED</div></div>
+    <div class="stat-box" id="sb-eta">  <span class="stat-icon">⏱</span><div class="stat-v" id="s-eta">—</div><div class="stat-k">ETA</div></div>
+    <div class="stat-box" id="sb-dl">   <span class="stat-icon">⬇</span><div class="stat-v" id="s-dl">—</div><div class="stat-k">DOWNLOADED</div></div>
+    <div class="stat-box" id="sb-total"><span class="stat-icon">📦</span><div class="stat-v" id="s-total">—</div><div class="stat-k">TOTAL</div></div>
+    <div class="stat-box" id="sb-pct">  <span class="stat-icon">%</span><div class="stat-v" id="s-pct">0%</div><div class="stat-k">PROGRESS</div></div>
+  </div>
+
+  <div id="completion-banner" class="ok"><span id="completion-icon">✓</span><span id="completion-text"></span></div>
+
+  <!-- Progress card -->
+  <div class="card">
+    <div class="prog-top">
+      <span class="sec-label" style="margin:0">TRANSFER PROGRESS</span>
+      <span id="pct-label">0%</span>
+    </div>
+    <div id="progress-bar-wrap"><div id="progress-bar"></div></div>
+    <div id="sparkline-wrap">
+      <svg id="sparkline" preserveAspectRatio="none"></svg>
+    </div>
+  </div>
+
+  <!-- Log card -->
+  <div class="card" id="log-card">
+    <div class="log-top">
+      <span class="sec-label" style="margin:0">EVENT LOG</span>
+      <div class="log-top-right">
+        <span style="font-size:10px;color:var(--text-lo)">last <span id="log-count">0</span> entries</span>
+        <button class="btn-sm" id="log-compact-toggle" aria-pressed="false">COMPACT</button>
+        <button class="btn-sm" onclick="clearLog()">CLEAR</button>
+      </div>
+    </div>
+    <div id="log">
+      <div id="log-viewport">
+        <div id="log-spacer"></div>
+        <div id="log-rows"></div>
+      </div>
+      <div id="log-empty">No active events yet.</div>
+    </div>
+  </div>
+
+  <!-- Status bar -->
+  <div id="statusbar">
+    <span id="status-text" class="idle">Ready — paste a URL to begin</span>
+    <span id="dir-label">📁 loading…</span>
+  </div>
+
+</div>
+
+<!-- Dialog -->
+<div id="dialog-overlay">
+  <div class="dialog">
+    <h2 id="dlg-title">Title</h2>
+    <p  id="dlg-body">Body</p>
+    <div class="dialog-btns" id="dlg-btns"></div>
+  </div>
+</div>
+
+<script>
+/* ── Tauri API bridge ──────────────────────────────────────────────────── */
+const { invoke } = window.__TAURI__.core;
+const { listen  } = window.__TAURI__.event;
+
+/* ── State ─────────────────────────────────────────────────────────────── */
+let isRunning    = false;
+let downloadsDir = "";
+const MAX_LOG_LINES = 150;
+const LOG_ROW_HEIGHT = 22;
+const LOG_OVERSCAN = 8;
+let logEntries = [];
+let logEntryMap = new Map();       // id → entry object
+let logUpdateKeyMap = new Map();   // updateKey → entry id
+let rowElementMap = new Map();     // entry id → HTMLElement (stable DOM cache)
+let dirtyRows = new Set();         // entry ids that need a DOM patch this frame
+let logIsCompact = false;
+let logRenderQueued = false;
+let logPinnedToBottom = true;
+let lastStrategyName = null;
+
+// Virtualization state
+let _lastStartIndex = -1;
+let _lastEndIndex   = -1;
+let _visiblePool    = [];          // pool of reusable DOM nodes (not entry-bound)
+
+// Debug counters (only logged when LOG_DEBUG=true)
+const LOG_DEBUG = false;
+const _dbg = { created: 0, patched: 0, reused: 0, renders: 0, skipped: 0 };
+const speedHistory = new Array(40).fill(0);
+let speedRawKbs  = 0;
+
+/* ══════════════════════════════════════════════════════════════════════
+   BACKGROUND — animated particle field
+═══════════════════════════════════════════════════════════════════════ */
+(function initBg() {
+  const canvas = document.getElementById("bg-canvas");
+  const ctx = canvas.getContext("2d");
+  let W, H, nodes = [], frameId;
+
+  const COLORS = ["rgba(61,127,255,", "rgba(0,212,255,", "rgba(93,146,255,"];
+
+  function resize() {
+    W = canvas.width  = window.innerWidth;
+    H = canvas.height = window.innerHeight;
+  }
+
+  function spawnNode() {
+    return {
+      x: Math.random() * W,
+      y: Math.random() * H,
+      vx: (Math.random() - 0.5) * 0.3,
+      vy: (Math.random() - 0.5) * 0.3,
+      r: Math.random() * 1.2 + 0.3,
+      c: COLORS[Math.floor(Math.random() * COLORS.length)],
+      a: Math.random() * 0.6 + 0.1,
+    };
+  }
+
+  resize();
+  window.addEventListener("resize", resize);
+  for (let i = 0; i < 55; i++) nodes.push(spawnNode());
+
+  const LINK_DIST = 100;
+
+  function draw() {
+    ctx.clearRect(0, 0, W, H);
+
+    // draw links
+    for (let i = 0; i < nodes.length; i++) {
+      for (let j = i + 1; j < nodes.length; j++) {
+        const dx = nodes[i].x - nodes[j].x;
+        const dy = nodes[i].y - nodes[j].y;
+        const d  = Math.sqrt(dx*dx + dy*dy);
+        if (d < LINK_DIST) {
+          const alpha = (1 - d / LINK_DIST) * 0.08;
+          ctx.beginPath();
+          ctx.moveTo(nodes[i].x, nodes[i].y);
+          ctx.lineTo(nodes[j].x, nodes[j].y);
+          ctx.strokeStyle = `rgba(61,127,255,${alpha})`;
+          ctx.lineWidth = 0.5;
+          ctx.stroke();
+        }
+      }
+    }
+
+    // draw nodes
+    for (const n of nodes) {
+      ctx.beginPath();
+      ctx.arc(n.x, n.y, n.r, 0, Math.PI * 2);
+      ctx.fillStyle = `${n.c}${n.a})`;
+      ctx.fill();
+
+      n.x += n.vx;
+      n.y += n.vy;
+      if (n.x < 0) n.x = W;
+      if (n.x > W) n.x = 0;
+      if (n.y < 0) n.y = H;
+      if (n.y > H) n.y = 0;
+    }
+
+    frameId = requestAnimationFrame(draw);
+  }
+  draw();
+})();
+
+
+/* ══════════════════════════════════════════════════════════════════════
+   SPARKLINE — speed graph
+═══════════════════════════════════════════════════════════════════════ */
+function updateSparkline() {
+  const svg = document.getElementById("sparkline");
+  const W   = svg.clientWidth  || 400;
+  const H   = svg.clientHeight || 28;
+  const max = Math.max(...speedHistory, 1);
+  const step = W / (speedHistory.length - 1);
+
+  const pts = speedHistory.map((v, i) => `${i * step},${H - (v / max) * (H - 4) - 2}`);
+  const poly = pts.join(" ");
+
+  svg.innerHTML = `
+    <defs>
+      <linearGradient id="sg" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%"   stop-color="rgba(61,127,255,0.4)"/>
+        <stop offset="100%" stop-color="rgba(61,127,255,0)"/>
+      </linearGradient>
+    </defs>
+    <polygon points="${poly} ${(speedHistory.length-1)*step},${H} 0,${H}" fill="url(#sg)"/>
+    <polyline points="${poly}" fill="none" stroke="rgba(61,127,255,0.7)" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>
+  `;
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   STARTUP
+═══════════════════════════════════════════════════════════════════════ */
+async function init() {
+  updateSparkline();
+
+  try {
+    const p = window.__TAURI__.path;
+    if (typeof p.resolveDirectory === "function") {
+      downloadsDir = await p.resolveDirectory(7, null);
+    } else if (typeof p.downloadDir === "function") {
+      downloadsDir = await p.downloadDir();
+    } else if (typeof p.homeDir === "function" && typeof p.join === "function") {
+      downloadsDir = await p.join(await p.homeDir(), "Downloads");
+    }
+    document.getElementById("header-sub").textContent =
+      `v2.0.0 · aria2 engine · ${downloadsDir}`;
+    document.getElementById("dir-label").textContent = `📁 ${downloadsDir}`;
+  } catch (_) {}
+
+  try {
+    const ok = await invoke("check_aria2");
+    const badge = document.getElementById("aria2-badge");
+    if (ok) {
+      badge.textContent = "● ARIA2 OK";
+      badge.className   = "ok";
+    } else {
+      badge.textContent = "● MISSING";
+      badge.className   = "err";
+      onEventLog({
+        timestamp: ts(),
+        type: "DOWNLOAD_FAILED",
+        category: "error",
+        title: "aria2c not found",
+        details: "Get it at https://github.com/aria2/aria2/releases",
+      });
+      setStatus("aria2 not found", "err");
+    }
+  } catch (_) {}
+
+  await listen("transfer-update",  e => onTransferUpdate(e.payload));
+  await listen("event-log",        e => onEventLog(e.payload));
+  await listen("status-msg",       e => setStatus(e.payload.text, e.payload.kind));
+  await listen("strategy-changed", e => onStrategyChanged(e.payload));
+  await listen("finished",         e => onFinished(e.payload));
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   DOWNLOAD / CANCEL
+═══════════════════════════════════════════════════════════════════════ */
+async function onDownload() {
+  if (isRunning) return;
+  const url = document.getElementById("url-input").value.trim();
+  if (!url) { showDialog("No URL", "Paste a download URL first.", [{ label:"OK" }]); return; }
+  if (!isValidUrl(url)) {
+    showDialog("Invalid URL", "Please enter a full URL starting with:\n  http://   https://   ftp://", [{ label:"OK" }]);
+    return;
+  }
+  resetUI();
+  isRunning = true;
+  document.getElementById("btn-dl").disabled    = true;
+  document.getElementById("btn-stop").disabled  = false;
+  document.getElementById("url-input").disabled = true;
+  try {
+    await invoke("start_download", { url, dir: downloadsDir });
+  } catch (err) {
+    onEventLog({
+      timestamp: ts(),
+      type: "DOWNLOAD_FAILED",
+      category: "error",
+      title: "Download start failed",
+      details: String(err),
+    });
+    setStatus("Failed to start", "err");
+    unlockUI();
+  }
+}
+
+async function onStop() {
+  if (!isRunning) return;
+  showDialog("Cancel Download", "Cancel the active download?", [
+    { label: "Yes", primary: true, action: async () => {
+        onEventLog({
+          timestamp: ts(),
+          type: "DOWNLOAD_PAUSED",
+          category: "warn",
+          title: "Cancel requested",
+          details: "Stopping aria2…",
+        });
+        await invoke("stop_download");
+      }
+    },
+    { label: "No" }
+  ]);
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   EVENT HANDLERS
+═══════════════════════════════════════════════════════════════════════ */
+function onStrategyChanged({ attempt, name, description }) {
+  lastStrategyName = name;
+  animateStat("attempt-num", attempt);
+  document.getElementById("strat-desc").textContent       = description;
+  document.getElementById("attempt-inline").textContent   = `Attempt ${attempt}`;
+  document.getElementById("mode-tag").textContent         = name;
+
+  const badge = document.getElementById("strat-badge");
+  if (attempt === 1) {
+    badge.textContent = name;
+    badge.className   = "badge";
+  } else {
+    badge.textContent = `↺ ${name}`;
+    badge.className   = "badge retry-mode";
+  }
+}
+
+function onTransferUpdate(p) {
+  const pct   = Math.min(100, Math.max(0, Number(p.pct) | 0));
+  const phase = p.phase || "downloading";
+  const strat = p.strategyName || lastStrategyName || "Default";
+
+  if (p.strategyName) {
+    document.getElementById("mode-tag").textContent = p.strategyName;
+    lastStrategyName = p.strategyName;
+  }
+  if (p.strategyAttempt) {
+    animateStat("attempt-num", p.strategyAttempt);
+    document.getElementById("attempt-inline").textContent = `Attempt ${p.strategyAttempt}`;
+  }
+
+  const fname = p.filename && p.filename !== "—" ? p.filename : guessFilenameFromUrl();
+  document.getElementById("fname-display").textContent = fname;
+
+  const totalKnown = Boolean(p.totalKnown);
+  const totalDisp  = p.total && p.total !== "—"
+    ? (totalKnown ? p.total : `${p.total} (est.)`) : "—";
+  updateStat("s-total", totalDisp);
+
+  const bar  = document.getElementById("progress-bar");
+  const wrap = document.getElementById("progress-bar-wrap");
+
+  if (phase === "connecting") {
+    bar.classList.add("indeterminate");
+    bar.classList.remove("has-progress");
+    wrap.classList.remove("glowing");
+    setPhaseUi("waiting", "CONNECTING", strat);
+    setStripState("active");
+    updateStat("s-speed", "—");
+    updateStat("s-eta",   "—");
+    updateStat("s-dl",    "—");
+    updateStat("s-pct",   "…");
+    document.getElementById("pct-label").textContent = "…";
+    return;
+  }
+  bar.classList.remove("indeterminate");
+
+  if (phase === "downloading") {
+    setPhaseUi("download", "DOWNLOADING", strat);
+    setStripState("active");
+    setProgress(pct);
+    wrap.classList.add("glowing");
+    updateStat("s-speed", p.speed || "—");
+    updateStat("s-eta",   p.eta   || "—");
+    updateStat("s-dl",    p.downloaded || "—");
+    updateStat("s-pct",   pct + "%");
+
+    // Feed sparkline
+    const rawKbs = parseKbs(p.speed);
+    speedHistory.push(rawKbs);
+    speedHistory.shift();
+    updateSparkline();
+    return;
+  }
+
+  if (phase === "complete") {
+    bar.classList.remove("indeterminate");
+    setPhaseUi("complete", "COMPLETE", strat);
+    setStripState("done");
+    setProgress(100);
+    wrap.classList.remove("glowing");
+    updateStat("s-speed", p.speed || "—");
+    updateStat("s-eta",   p.eta   || "—");
+    updateStat("s-dl",    p.downloaded || "—");
+    updateStat("s-pct",   "100%");
+    return;
+  }
+
+  if (phase === "cancelled" || phase === "error") {
+    bar.classList.remove("indeterminate");
+    wrap.classList.remove("glowing");
+    setPhaseUi(phase === "cancelled" ? "warn" : "error",
+               phase === "cancelled" ? "CANCELLED" : "ERROR", strat);
+    setStripState("fail");
+    return;
+  }
+
+  // fallback
+  setPhaseUi("download", "DOWNLOADING", strat);
+  setStripState("active");
+  setProgress(pct);
+  updateStat("s-speed", p.speed || "—");
+  updateStat("s-eta",   p.eta   || "—");
+  updateStat("s-dl",    p.downloaded || "—");
+}
+
+function parseKbs(speedStr) {
+  if (!speedStr || speedStr === "—") return 0;
+  const m = String(speedStr).match(/([\d.]+)\s*(k|m|g)/i);
+  if (!m) return 0;
+  const v = parseFloat(m[1]);
+  const u = m[2].toLowerCase();
+  if (u === "k") return v;
+  if (u === "m") return v * 1000;
+  if (u === "g") return v * 1000000;
+  return v;
+}
+
+function guessFilenameFromUrl() {
+  try {
+    const u = document.getElementById("url-input").value.trim();
+    const path = u.split("?")[0];
+    const leaf = path.split("/").filter(Boolean).pop();
+    return leaf && !leaf.includes(":") ? leaf : "—";
+  } catch (_) { return "—"; }
+}
+
+function setPhaseUi(kind, label, strategyName) {
+  const iconEl = document.getElementById("phase-icon");
+  const labEl  = document.getElementById("phase-label");
+  const icons  = { download:"⬇", complete:"✓", waiting:"⏳", warn:"⚠", error:"✕" };
+
+  iconEl.textContent = icons[kind] || "○";
+  iconEl.className   = kind === "waiting" ? "spin" : "";
+  labEl.textContent  = label;
+  labEl.style.color  =
+    kind === "complete" ? "var(--success)"
+    : kind === "error"  ? "var(--danger)"
+    : kind === "warn"   ? "var(--warning)"
+    : "var(--cyan)";
+
+  document.getElementById("mode-tag").textContent = strategyName;
+  const an = document.getElementById("attempt-num").textContent;
+  document.getElementById("attempt-inline").textContent =
+    an && an !== "—" ? `Attempt ${an}` : "—";
+}
+
+function setStripState(s) {
+  const el = document.getElementById("session-strip");
+  el.className = s; // active | done | fail | ""
+}
+
+function onFinished(success) {
+  isRunning = false;
+  unlockUI();
+  const banner = document.getElementById("completion-banner");
+  banner.classList.remove("ok", "err");
+
+  if (success) {
+    setProgress(100);
+    setPhaseUi("complete", "COMPLETE", lastStrategyName || "Default");
+    setStripState("done");
+    banner.classList.add("show", "ok");
+    document.getElementById("completion-icon").textContent = "✓";
+    document.getElementById("completion-text").textContent = `Saved → ${downloadsDir}`;
+    spawnParticleBurst("#00E87A");
+    showDialog("Download Complete", `File saved to:\n${downloadsDir}`, [{ label:"OK" }]);
+  } else {
+    banner.classList.add("show", "err");
+    document.getElementById("completion-icon").textContent = "✕";
+    document.getElementById("completion-text").textContent =
+      "Finished with errors — check the event log";
+    setStripState("fail");
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   UI HELPERS
+═══════════════════════════════════════════════════════════════════════ */
+function setProgress(pct) {
+  const n = Math.min(100, Math.max(0, Number(pct) || 0));
+  const bar = document.getElementById("progress-bar");
+  bar.classList.remove("indeterminate");
+  bar.style.width = n + "%";
+  if (n > 0) bar.classList.add("has-progress"); else bar.classList.remove("has-progress");
+  document.getElementById("pct-label").textContent = n + "%";
+  document.getElementById("s-pct").textContent     = n + "%";
+  document.getElementById("pct-label").style.color =
+    n === 100 ? "var(--success)" : "var(--accent)";
+}
+
+function updateStat(id, val) {
+  const el = document.getElementById(id);
+  if (el && el.textContent !== String(val)) {
+    el.textContent = val;
+    el.classList.remove("flash");
+    void el.offsetWidth;
+    el.classList.add("flash");
+  }
+}
+
+function animateStat(id, val) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = val;
+  el.classList.remove("flash");
+  void el.offsetWidth;
+  el.classList.add("flash");
+}
+
+function setStatus(text, kind = "idle") {
+  const el = document.getElementById("status-text");
+  el.textContent = text;
+  el.className   = kind;
+}
+
+// ── Event Log (structured) ───────────────────────────────────────────
+function ts() {
+  const d = new Date();
+  return `${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}:${String(d.getSeconds()).padStart(2,"0")}`;
+}
+
+function onEventLog(payload) {
+  if (!payload || !payload.type) return;
+  const entry = {
+    id: payload.id || `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+    timestamp: payload.timestamp || ts(),
+    type: payload.type,
+    category: payload.category || "info",
+    title: payload.title || "",
+    details: payload.details || "",
+    updateKey: payload.updateKey || null,
+    group: payload.group || null,
+  };
+
+  if (entry.updateKey && logUpdateKeyMap.has(entry.updateKey)) {
+    const existingId = logUpdateKeyMap.get(entry.updateKey);
+    const existing = logEntryMap.get(existingId);
+    if (existing) {
+      // Patch in-place — do NOT add a new entry
+      existing.timestamp = entry.timestamp;
+      existing.type      = entry.type;
+      existing.category  = entry.category;
+      existing.title     = entry.title;
+      existing.details   = entry.details;
+      existing.group     = entry.group;
+      // Mark only this entry dirty so only its row gets patched
+      dirtyRows.add(existingId);
+      queueLogRender();
+      return;
+    }
+  }
+
+  addLogEntry(entry);
+}
+
+function addLogEntry(entry) {
+  entry.appear = true;
+  logEntries.push(entry);
+  logEntryMap.set(entry.id, entry);
+  if (entry.updateKey) logUpdateKeyMap.set(entry.updateKey, entry.id);
+  dirtyRows.add(entry.id);
+
+  if (logEntries.length > MAX_LOG_LINES) {
+    const removed = logEntries.shift();
+    if (removed) {
+      logEntryMap.delete(removed.id);
+      dirtyRows.delete(removed.id);
+      if (removed.updateKey && logUpdateKeyMap.get(removed.updateKey) === removed.id)
+        logUpdateKeyMap.delete(removed.updateKey);
+      // Recycle DOM node to pool
+      const el = rowElementMap.get(removed.id);
+      if (el) { rowElementMap.delete(removed.id); el._boundId = null; _visiblePool.push(el); }
+    }
+  }
+  queueLogRender();
+}
+
+function clearLog() {
+  logEntries = [];
+  logEntryMap.clear();
+  logUpdateKeyMap.clear();
+  dirtyRows.clear();
+  rowElementMap.clear();
+  _visiblePool.length = 0;
+  _lastStartIndex = -1;
+  _lastEndIndex   = -1;
+  logPinnedToBottom = true;
+  // Hard clear the DOM — only permitted on CLEAR action
+  const rows = document.getElementById("log-rows");
+  if (rows) rows.textContent = "";
+  queueLogRender(true);
+}
+
+function queueLogRender(force = false) {
+  if (logRenderQueued && !force) return;
+  logRenderQueued = true;
+  requestAnimationFrame(() => {
+    logRenderQueued = false;
+    // Skip render entirely if nothing is dirty and the viewport hasn't moved
+    if (!force && dirtyRows.size === 0 && _lastStartIndex >= 0) {
+      _dbg.skipped++;
+      return;
+    }
+    renderLogVirtual(force);
+  });
+}
+
+function renderLogVirtual(force) {
+  _dbg.renders++;
+  const log      = document.getElementById("log");
+  const spacer   = document.getElementById("log-spacer");
+  const rowsEl   = document.getElementById("log-rows");
+
+  const total = logEntries.length;
+  document.getElementById("log-count").textContent = String(total);
+  log.classList.toggle("empty", total === 0);
+
+  const atBottom = log.scrollHeight - log.scrollTop <= log.clientHeight + 30;
+  if (atBottom) logPinnedToBottom = true;
+
+  // Update virtual height
+  const newHeight = `${total * LOG_ROW_HEIGHT}px`;
+  if (spacer.style.height !== newHeight) spacer.style.height = newHeight;
+
+  // Compute visible window
+  const scrollTop     = log.scrollTop;
+  const startIndex    = Math.max(0, Math.floor(scrollTop / LOG_ROW_HEIGHT) - LOG_OVERSCAN);
+  const visibleCount  = Math.ceil((log.clientHeight || 200) / LOG_ROW_HEIGHT) + LOG_OVERSCAN * 2;
+  const endIndex      = Math.min(total, startIndex + visibleCount);
+
+  const windowChanged = startIndex !== _lastStartIndex || endIndex !== _lastEndIndex;
+
+  if (!windowChanged && !force && dirtyRows.size > 0) {
+    // Window is stable — only patch dirty rows that are currently visible
+    patchDirtyVisible(startIndex, endIndex);
+    dirtyRows.clear();
+  } else if (windowChanged || force) {
+    // Viewport shifted — reposition/rebind visible rows incrementally
+    repositionVisibleRows(rowsEl, startIndex, endIndex);
+    _lastStartIndex = startIndex;
+    _lastEndIndex   = endIndex;
+    dirtyRows.clear();
+  }
+
+  // Auto-scroll
+  if (logPinnedToBottom) {
+    log.scrollTop = log.scrollHeight;
+  }
+
+  if (LOG_DEBUG) {
+    console.debug("[LogRenderer]", _dbg, {startIndex, endIndex, dirty: dirtyRows.size});
+  }
+}
+
+/**
+ * Patch only the dirty rows that are within the current visible window.
+ * Does NOT touch any other row.
+ */
+function patchDirtyVisible(startIndex, endIndex) {
+  for (const id of dirtyRows) {
+    const el = rowElementMap.get(id);
+    if (!el) continue; // not rendered yet — repositionVisibleRows will handle it
+    const idx = logEntries.findIndex(e => e.id === id);
+    if (idx < startIndex || idx >= endIndex) continue; // off-screen
+    const entry    = logEntries[idx];
+    const prevEntry = logEntries[idx - 1];
+    patchRowContent(el, entry, prevEntry);
+    _dbg.patched++;
+  }
+}
+
+/**
+ * Incrementally reconcile visible rows:
+ *  - rows that stay bound to the same entry: skip (unless dirty)
+ *  - rows scrolling into view: rebind from pool or create
+ *  - rows scrolling out of view: return to pool
+ */
+function repositionVisibleRows(rowsEl, startIndex, endIndex) {
+  const prevStart = _lastStartIndex;
+  const prevEnd   = _lastEndIndex;
+
+  // Collect row elements that are leaving the viewport → recycle
+  if (prevStart >= 0) {
+    for (let i = prevStart; i < prevEnd; i++) {
+      if (i < startIndex || i >= endIndex) {
+        // This slot is leaving the viewport
+        const entry = logEntries[i];
+        if (!entry) continue;
+        const el = rowElementMap.get(entry.id);
+        if (el && el.parentNode === rowsEl) {
+          rowsEl.removeChild(el);
+          el._boundId = null;
+          _visiblePool.push(el);
+          rowElementMap.delete(entry.id);
+          _dbg.reused++;
+        }
+      }
+    }
+  }
+
+  // Render all visible slots
+  for (let i = startIndex; i < endIndex; i++) {
+    const entry     = logEntries[i];
+    const prevEntry = logEntries[i - 1];
+    if (!entry) continue;
+
+    let el = rowElementMap.get(entry.id);
+    const isDirty = dirtyRows.has(entry.id);
+
+    if (el) {
+      // Already bound — only patch if dirty
+      if (isDirty) {
+        patchRowContent(el, entry, prevEntry);
+        _dbg.patched++;
+      }
+      // Reposition without DOM removal/insertion
+      const newTransform = `translateY(${i * LOG_ROW_HEIGHT}px)`;
+      if (el.style.transform !== newTransform) el.style.transform = newTransform;
+    } else {
+      // Need to bind an element to this entry
+      el = acquireRow(rowsEl);
+      rowElementMap.set(entry.id, el);
+      el._boundId = entry.id;
+      patchRowContent(el, entry, prevEntry);
+      el.style.transform = `translateY(${i * LOG_ROW_HEIGHT}px)`;
+      rowsEl.appendChild(el);
+      _dbg.created++;
+    }
+  }
+}
+
+/**
+ * Get a recycled DOM node or create a fresh one.
+ */
+function acquireRow(rowsEl) {
+  if (_visiblePool.length > 0) {
+    _dbg.reused++;
+    return _visiblePool.pop();
+  }
+  _dbg.created++;
+  return makeLogRow();
+}
+
+/**
+ * Patch an existing row's text/classes without rebuilding the node.
+ * This is the ONLY place row content is written.
+ */
+function patchRowContent(row, entry, prevEntry) {
+  if (!entry) return;
+  const tsEl      = row.children[0];
+  const iconEl    = row.children[1];
+  const body      = row.children[2];
+  const groupEl   = body.children[0];
+  const titleEl   = body.children[1];
+  const detailsEl = body.children[2];
+
+  const isGroupStart = entry.group && (!prevEntry || prevEntry.group !== entry.group);
+
+  // Patch text only if changed — avoids redundant layout
+  if (tsEl.textContent      !== entry.timestamp)                tsEl.textContent      = entry.timestamp;
+  const icon = iconForType(entry.type);
+  if (iconEl.textContent    !== icon)                           iconEl.textContent    = icon;
+  const grp = isGroupStart ? entry.group : "";
+  if (groupEl.textContent   !== grp)                            groupEl.textContent   = grp;
+  if (titleEl.textContent   !== entry.title)                    titleEl.textContent   = entry.title;
+  const det = entry.details ? ` ${entry.details}` : "";
+  if (detailsEl.textContent !== det)                            detailsEl.textContent = det;
+
+  // Patch className
+  const cls = `log-row cat-${entry.category}`
+    + (logIsCompact  ? " compact"     : "")
+    + (entry.group   ? " grouped"     : "")
+    + (isGroupStart  ? " group-start" : "")
+    + (entry.appear  ? " appear"      : "");
+  if (row.className !== cls) row.className = cls;
+  entry.appear = false;
+}
+
+function makeLogRow() {
+  const row = document.createElement("div");
+  row.className = "log-row";
+  row.style.cssText = "contain:content;will-change:transform;position:absolute;left:0;right:0;";
+
+  const tsEl = document.createElement("span");
+  tsEl.className = "log-ts";
+
+  const iconEl = document.createElement("span");
+  iconEl.className = "log-icon";
+
+  const body = document.createElement("div");
+  const groupEl   = document.createElement("span"); groupEl.className   = "log-group";
+  const titleEl   = document.createElement("span"); titleEl.className   = "log-title";
+  const detailsEl = document.createElement("span"); detailsEl.className = "log-details";
+  body.appendChild(groupEl);
+  body.appendChild(titleEl);
+  body.appendChild(detailsEl);
+
+  row.appendChild(tsEl);
+  row.appendChild(iconEl);
+  row.appendChild(body);
+  return row;
+}
+
+function iconForType(type) {
+  switch (type) {
+    case "DOWNLOAD_STARTED":    return "↓";
+    case "DOWNLOAD_PROGRESS":   return "↓";
+    case "DOWNLOAD_RESUMED":    return "▶";
+    case "DOWNLOAD_PAUSED":     return "‖";
+    case "CONNECTION_CHANGED":  return "⇄";
+    case "SPEED_CHANGED":       return "⚡";
+    case "FILE_ALLOCATED":      return "🗂";
+    case "CHECKSUM_OK":         return "✓";
+    case "DOWNLOAD_COMPLETED":  return "✓";
+    case "DOWNLOAD_FAILED":     return "✖";
+    case "RETRYING":            return "⟳";
+    case "METADATA_UPDATED":    return "ℹ";
+    default:                    return "•";
+  }
+}
+
+function initLogUi() {
+  const log = document.getElementById("log");
+  const toggle = document.getElementById("log-compact-toggle");
+  log.addEventListener("scroll", () => {
+    const atBottom = log.scrollHeight - log.scrollTop <= log.clientHeight + 30;
+    logPinnedToBottom = atBottom;
+    // Invalidate cached window so repositionVisibleRows runs on next frame
+    _lastStartIndex = -1;
+    _lastEndIndex   = -1;
+    queueLogRender();
+  });
+  toggle.addEventListener("click", () => {
+    logIsCompact = !logIsCompact;
+    toggle.setAttribute("aria-pressed", logIsCompact ? "true" : "false");
+    log.classList.toggle("compact", logIsCompact);
+    // Compact toggle changes all rows — mark all visible dirty
+    _lastStartIndex = -1;
+    _lastEndIndex   = -1;
+    queueLogRender(true);
+  });
+  queueLogRender(true);
+}
+
+// ── Particles (success burst) ────────────────────────────────────────
+function spawnParticleBurst(color) {
+  for (let i = 0; i < 18; i++) {
+    setTimeout(() => {
+      const p = document.createElement("div");
+      p.className = "particle";
+      const size = Math.random() * 5 + 2;
+      p.style.cssText = `
+        width:${size}px; height:${size}px;
+        background:${color};
+        left:${Math.random() * 100}%;
+        bottom:0;
+        box-shadow: 0 0 ${size*2}px ${color};
+        animation-duration: ${Math.random() * 1500 + 1000}ms;
+        animation-delay: ${Math.random() * 400}ms;
+      `;
+      document.body.appendChild(p);
+      setTimeout(() => p.remove(), 3000);
+    }, i * 40);
+  }
+}
+
+// ── Reset ────────────────────────────────────────────────────────────
+function resetUI() {
+  document.getElementById("completion-banner").classList.remove("show", "ok", "err");
+  const bar = document.getElementById("progress-bar");
+  bar.classList.remove("indeterminate", "has-progress");
+  document.getElementById("progress-bar-wrap").classList.remove("glowing");
+  lastStrategyName = null;
+  clearLog();
+  setPhaseUi("waiting", "STARTING", "Default");
+  setStripState("active");
+  setProgress(0);
+  speedHistory.fill(0);
+  updateSparkline();
+  ["s-speed","s-eta","s-dl","s-total"].forEach(id => {
+    document.getElementById(id).textContent = "—";
+  });
+  document.getElementById("s-pct").textContent = "0%";
+  document.getElementById("attempt-num").textContent = "—";
+  document.getElementById("attempt-inline").textContent = "—";
+  document.getElementById("fname-display").textContent = "—";
+  const badge = document.getElementById("strat-badge");
+  badge.textContent = "Default";
+  badge.className   = "badge";
+  document.getElementById("strat-desc").textContent = "Standard aria2 — no custom headers";
+  document.getElementById("mode-tag").textContent = "Default";
+}
+
+function unlockUI() {
+  document.getElementById("btn-dl").disabled    = false;
+  document.getElementById("btn-stop").disabled  = true;
+  document.getElementById("url-input").disabled = false;
+  setStripState("");
+}
+
+// ── URL validation ────────────────────────────────────────────────────
+function isValidUrl(url) {
+  try {
+    const u = new URL(url);
+    return ["http:", "https:", "ftp:", "ftps:"].includes(u.protocol);
+  } catch (_) { return false; }
+}
+
+// ── Dialog ────────────────────────────────────────────────────────────
+function showDialog(title, body, buttons) {
+  document.getElementById("dlg-title").textContent = title;
+  document.getElementById("dlg-body").textContent  = body;
+  const btnsEl = document.getElementById("dlg-btns");
+  btnsEl.innerHTML = "";
+  buttons.forEach(btn => {
+    const el = document.createElement("button");
+    el.textContent = btn.label;
+    if (!btn.primary) el.classList.add("secondary");
+    el.onclick = async () => { closeDialog(); if (btn.action) await btn.action(); };
+    btnsEl.appendChild(el);
+  });
+  document.getElementById("dialog-overlay").classList.add("open");
+}
+function closeDialog() {
+  document.getElementById("dialog-overlay").classList.remove("open");
+}
+
+// ── Enter key ────────────────────────────────────────────────────────
+document.getElementById("url-input").addEventListener("keydown", e => {
+  if (e.key === "Enter") onDownload();
+});
+
+// ── 3D tilt on cards ─────────────────────────────────────────────────
+document.querySelectorAll(".card, .stat-box").forEach(card => {
+  card.addEventListener("mousemove", e => {
+    const r = card.getBoundingClientRect();
+    const x = ((e.clientX - r.left) / r.width  - 0.5) * 8;
+    const y = ((e.clientY - r.top)  / r.height - 0.5) * 8;
+    card.style.transform = `perspective(600px) rotateX(${-y}deg) rotateY(${x}deg) translateZ(4px)`;
+  });
+  card.addEventListener("mouseleave", () => {
+    card.style.transform = "";
+  });
+});
+
+// ── Boot ──────────────────────────────────────────────────────────────
+initLogUi();
+init().catch(console.error);
+</script>
+</body>
+</html>

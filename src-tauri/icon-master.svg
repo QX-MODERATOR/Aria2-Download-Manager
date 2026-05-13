@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="bg" x1="124" y1="96" x2="900" y2="930" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#021735"/>
+      <stop offset="0.52" stop-color="#031028"/>
+      <stop offset="1" stop-color="#020713"/>
+    </linearGradient>
+    <linearGradient id="markFill" x1="258" y1="812" x2="686" y2="168" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#2266ff"/>
+      <stop offset="0.44" stop-color="#00aaff"/>
+      <stop offset="1" stop-color="#23f7ee"/>
+    </linearGradient>
+    <linearGradient id="swooshFill" x1="222" y1="718" x2="848" y2="494" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#7657ff"/>
+      <stop offset="0.34" stop-color="#1179ff"/>
+      <stop offset="1" stop-color="#20f4ed"/>
+    </linearGradient>
+    <linearGradient id="numberFill" x1="720" y1="506" x2="890" y2="812" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#2af8ee"/>
+      <stop offset="1" stop-color="#1388ff"/>
+    </linearGradient>
+  </defs>
+
+  <rect x="64" y="64" width="896" height="896" rx="214" fill="url(#bg)"/>
+  <path d="M250 332 C330 182 642 132 802 250 C904 325 947 458 910 576"
+        fill="none" stroke="#18e7f1" stroke-width="38" stroke-linecap="round" opacity="0.95"/>
+  <path d="M404 770 L516 210 C524 170 584 169 604 207 L772 600"
+        fill="none" stroke="#021026" stroke-width="166" stroke-linecap="round" stroke-linejoin="round" opacity="0.42"/>
+  <path d="M360 780 L514 236 C528 188 588 188 610 235 L790 640"
+        fill="none" stroke="url(#markFill)" stroke-width="132" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M238 700 C408 590 590 526 836 500 C632 552 464 650 330 805"
+        fill="none" stroke="#020814" stroke-width="96" stroke-linecap="round" opacity="0.62"/>
+  <path d="M236 684 C407 576 594 510 832 488 C623 538 452 640 316 786"
+        fill="none" stroke="url(#swooshFill)" stroke-width="74" stroke-linecap="round"/>
+  <path d="M420 830 C514 872 640 876 748 842"
+        fill="none" stroke="#187dff" stroke-width="34" stroke-linecap="round"/>
+  <text x="704" y="810" font-family="Arial Black, Arial, Segoe UI, sans-serif" font-size="332" font-weight="900" fill="#020916" opacity="0.55">2</text>
+  <text x="690" y="792" font-family="Arial Black, Arial, Segoe UI, sans-serif" font-size="332" font-weight="900" fill="url(#numberFill)">2</text>
+</svg>

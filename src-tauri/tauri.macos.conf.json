@@ -1,0 +1,29 @@
+{
+  "bundle": {
+    "targets": ["app", "dmg"],
+    "icon": [
+      "icons/icon.icns",
+      "icons/128x128.png",
+      "icons/128x128@2x.png"
+    ],
+    "macOS": {
+      "bundleName": "Aria2 Download Manager",
+      "minimumSystemVersion": "11.0",
+      "hardenedRuntime": true,
+      "dmg": {
+        "windowSize": {
+          "width": 660,
+          "height": 400
+        },
+        "appPosition": {
+          "x": 180,
+          "y": 170
+        },
+        "applicationFolderPosition": {
+          "x": 480,
+          "y": 170
+        }
+      }
+    }
+  }
+}

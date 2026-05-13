@@ -1,0 +1,13 @@
+{
+  "name": "aria2-download-manager",
+  "version": "2.0.0",
+  "private": true,
+  "description": "A Tauri desktop download manager powered by aria2.",
+  "scripts": {
+    "tauri": "cargo tauri",
+    "tauri:dev": "cargo tauri dev",
+    "build:windows": "powershell -NoProfile -ExecutionPolicy Bypass -File ./src-tauri/build-release.ps1",
+    "build:macos": "bash ./scripts/build-macos.sh",
+    "build:linux": "bash ./scripts/build-linux.sh"
+  }
+}

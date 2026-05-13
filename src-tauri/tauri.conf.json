@@ -1,0 +1,51 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Aria2 Download Manager",
+  "version": "2.0.0",
+  "identifier": "com.aria2.manager",
+  "build": {
+    "frontendDist": "../src"
+  },
+  "app": {
+    "withGlobalTauri": true,
+    "windows": [
+      {
+        "title": "Aria2 Download Manager",
+        "width": 920,
+        "height": 780,
+        "minWidth": 800,
+        "minHeight": 700,
+        "center": true
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "publisher": "Aria2 Download Manager",
+    "homepage": "https://aria2.github.io/",
+    "category": "Utility",
+    "shortDescription": "A desktop download manager powered by aria2.",
+    "longDescription": "Aria2 Download Manager is a cross-platform desktop download manager powered by aria2 with retry strategies, progress reporting, and a simple Tauri interface.",
+    "icon": [
+      "icons/16x16.png",
+      "icons/24x24.png",
+      "icons/32x32.png",
+      "icons/48x48.png",
+      "icons/64x64.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.ico"
+    ],
+    "externalBin": ["bin/aria2c"],
+    "windows": {
+      "nsis": {
+        "installerIcon": "icons/icon.ico",
+        "uninstallerIcon": "icons/icon.ico"
+      }
+    }
+  }
+}
