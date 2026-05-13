@@ -94,7 +94,7 @@ sudo apt install -y \
   build-essential curl wget file libssl-dev \
   libgtk-3-dev libwebkit2gtk-4.1-dev \
   libayatana-appindicator3-dev librsvg2-dev \
-  patchelf rpm aria2
+  pkg-config libxdo-dev patchelf libfuse2 rpm aria2
 ```
 
 ### Build
