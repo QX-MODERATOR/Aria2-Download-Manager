@@ -1034,7 +1034,7 @@ html, body {
     </div>
     <div class="title-block">
       <h1>ARIA2 DOWNLOAD MANAGER</h1>
-      <p id="header-sub">v2.0.0 · aria2 engine · loading…</p>
+      <p id="header-sub">v1.0.0 · aria2 engine · loading…</p>
     </div>
     <span id="aria2-badge" class="ok">● ARIA2 OK</span>
   </div>
@@ -1273,7 +1273,7 @@ async function init() {
       downloadsDir = await p.join(await p.homeDir(), "Downloads");
     }
     document.getElementById("header-sub").textContent =
-      `v2.0.0 · aria2 engine · ${downloadsDir}`;
+      `v1.0.0 · aria2 engine · ${downloadsDir}`;
     document.getElementById("dir-label").textContent = `📁 ${downloadsDir}`;
   } catch (_) {}
 

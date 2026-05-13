@@ -1,6 +1,7 @@
 # Aria2 Download Manager
 
 ![License](https://img.shields.io/github/license/QX-MODERATOR/Aria2-Download-Manager)
+![Release](https://img.shields.io/github/v/release/QX-MODERATOR/Aria2-Download-Manager)
 ![Tauri](https://img.shields.io/badge/Tauri-v2-24C8DB)
 
 Aria2 Download Manager is a desktop download manager powered by aria2. It provides a focused Tauri interface for starting downloads, tracking progress, viewing retry status, and reading structured download events.
