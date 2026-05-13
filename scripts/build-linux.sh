@@ -43,7 +43,7 @@ if [[ "$BUNDLES" == *rpm* ]] && ! command -v rpmbuild >/dev/null 2>&1; then
 fi
 
 echo "Compiling Rust release binary..."
-cargo build --release
+cargo build --release --manifest-path "$ROOT_DIR/src-tauri/Cargo.toml"
 
 echo "Building Tauri Linux bundles..."
 npm run tauri -- build --bundles "$BUNDLES"

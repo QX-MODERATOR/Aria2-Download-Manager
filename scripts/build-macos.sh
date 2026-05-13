@@ -92,10 +92,10 @@ iconutil -c icns "$ICONSET_DIR" -o "$ICNS_OUT"
 rm -rf "$ICONSET_DIR"
 
 if [[ "$TARGET" == "universal-apple-darwin" ]]; then
-  cargo build --release --target aarch64-apple-darwin
-  cargo build --release --target x86_64-apple-darwin
+  cargo build --release --manifest-path "$ROOT_DIR/src-tauri/Cargo.toml" --target aarch64-apple-darwin
+  cargo build --release --manifest-path "$ROOT_DIR/src-tauri/Cargo.toml" --target x86_64-apple-darwin
 else
-  cargo build --release --target "$TARGET"
+  cargo build --release --manifest-path "$ROOT_DIR/src-tauri/Cargo.toml" --target "$TARGET"
 fi
 npm run tauri -- build --target "$TARGET" --bundles "$BUNDLES"
 
