@@ -55,9 +55,6 @@ jobs:
       - name: Install JavaScript dependencies
         run: npm ci
 
-      - name: Install Tauri CLI
-        run: cargo install tauri-cli --version 2.11.1 --locked
-
       - name: Show tool versions
         shell: pwsh
         run: |
@@ -65,7 +62,7 @@ jobs:
           npm --version
           rustc --version
           cargo --version
-          cargo tauri --version
+          npx tauri --version
           magick --version
 
       - name: Build Windows bundles
@@ -123,16 +120,13 @@ jobs:
       - name: Install JavaScript dependencies
         run: npm ci
 
-      - name: Install Tauri CLI
-        run: cargo install tauri-cli --version 2.11.1 --locked
-
       - name: Show tool versions
         run: |
           node --version
           npm --version
           rustc --version
           cargo --version
-          cargo tauri --version
+          npx tauri --version
           magick --version
 
       - name: Build macOS bundles
@@ -185,6 +179,9 @@ jobs:
           cache-dependency-path: package-lock.json
 
       - name: Install Linux bundling dependencies
+        env:
+          DEBIAN_FRONTEND: noninteractive
+          NEEDRESTART_MODE: a
         run: |
           sudo apt update
           sudo apt install -y \
@@ -196,16 +193,13 @@ jobs:
       - name: Install JavaScript dependencies
         run: npm ci
 
-      - name: Install Tauri CLI
-        run: cargo install tauri-cli --version 2.11.1 --locked
-
       - name: Show tool versions
         run: |
           node --version
           npm --version
           rustc --version
           cargo --version
-          cargo tauri --version
+          npx tauri --version
           aria2c --version | head -n 1
 
       - name: Build Linux bundles

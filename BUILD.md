@@ -31,11 +31,7 @@ src-tauri/bin/aria2c-aarch64-unknown-linux-gnu
 
 - Rust: https://rustup.rs
 - Node.js LTS: https://nodejs.org
-- Tauri CLI:
-
-```bash
-cargo install tauri-cli --version "^2"
-```
+The Tauri CLI is installed through npm from the project lockfile.
 
 ## Windows
 

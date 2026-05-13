@@ -50,7 +50,12 @@ Remove-BuildArtifact (Join-Path $PSScriptRoot 'dist')
 Remove-BuildArtifact (Join-Path $PSScriptRoot 'release')
 Remove-BuildArtifact (Join-Path $PSScriptRoot '.tauri')
 
-cargo tauri build @args
+Push-Location $ProjectRoot
+try {
+  npm run tauri -- build @args
+} finally {
+  Pop-Location
+}
 
 & (Join-Path $PSScriptRoot 'scripts\verify-windows-icon.ps1')
 
