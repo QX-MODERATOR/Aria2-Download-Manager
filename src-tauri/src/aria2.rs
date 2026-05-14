@@ -9,13 +9,13 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::{
     env,
+    fs::{self, OpenOptions},
     io::{BufRead, BufReader},
     path::{Path, PathBuf},
-    process::{Command, Stdio},
+    process::{Command, Output, Stdio},
     sync::{
         atomic::{AtomicBool, Ordering},
-        mpsc,
-        Arc, Mutex,
+        mpsc, Arc, Mutex,
     },
     thread,
 };
@@ -24,9 +24,12 @@ use tauri::{AppHandle, Emitter, Manager};
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 const BASE_ARGS: &[&str] = &[
-    "-x", "16",
-    "-s", "16",
-    "-k", "1M",
+    "-x",
+    "16",
+    "-s",
+    "16",
+    "-k",
+    "1M",
     "-c",
     "--max-tries=3",
     "--retry-wait=2",
@@ -39,10 +42,10 @@ const BASE_ARGS: &[&str] = &[
 
 const DEBUG_RAW_LOGS: bool = false;
 const LOG_GROUP: &str = "Download Session";
+const MAX_DIAGNOSTIC_CHARS: usize = 1_200;
 
-static ANSI_RE: Lazy<Regex> = Lazy::new(|| {
-    Regex::new(r"\x1b\[[0-9;]*[mGKHF]|\x1b\][^\x07]*\x07|\r").unwrap()
-});
+static ANSI_RE: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r"\x1b\[[0-9;]*[mGKHF]|\x1b\][^\x07]*\x07|\r").unwrap());
 
 /// aria2 console summary (single line). Must not span multiple Rust string lines — a literal
 /// newline in the pattern prevented matching real output (Chrome header paths looked “broken”).
@@ -59,36 +62,33 @@ static SUMMARY_MIN_RE: Lazy<Regex> = Lazy::new(|| {
         .unwrap()
 });
 
-static PCT_FALLBACK_RE: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r"\((\d+)%\)").unwrap());
+static PCT_FALLBACK_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"\((\d+)%\)").unwrap());
 
-static SPEED_RE: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r"(?i)([\d.]+)\s*([kmg])(?:i)?b").unwrap());
+static SPEED_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"(?i)([\d.]+)\s*([kmg])(?:i)?b").unwrap());
 
 /// Final path from aria2 result lines (Windows or POSIX paths).
-static DOWNLOAD_COMPLETE_RE: Lazy<Regex> = Lazy::new(|| {
-    Regex::new(r"(?i)download complete:\s*(?P<path>.+)$").unwrap()
-});
+static DOWNLOAD_COMPLETE_RE: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r"(?i)download complete:\s*(?P<path>.+)$").unwrap());
 
 // ── App state (shared across commands) ───────────────────────────────────────
 
 pub struct UiSession {
-    pub strategy_name:    String,
+    pub strategy_name: String,
     pub strategy_attempt: u32,
-    pub filename:         Option<String>,
+    pub filename: Option<String>,
     /// Suppresses duplicate console lines from noisy aria2 output.
-    pub last_log_line:    Option<String>,
-    pub event_state:      EventState,
+    pub last_log_line: Option<String>,
+    pub event_state: EventState,
 }
 
 impl Default for UiSession {
     fn default() -> Self {
         Self {
-            strategy_name:    "Default".into(),
+            strategy_name: "Default".into(),
             strategy_attempt: 1,
-            filename:         None,
-            last_log_line:    None,
-            event_state:      EventState::default(),
+            filename: None,
+            last_log_line: None,
+            event_state: EventState::default(),
         }
     }
 }
@@ -150,19 +150,19 @@ pub struct EventState {
 }
 
 pub struct AppState {
-    pub abort:   Arc<AtomicBool>,
+    pub abort: Arc<AtomicBool>,
     pub running: Arc<AtomicBool>,
     // Holds the child process so stop_download can kill it immediately.
-    pub child:   Arc<Mutex<Option<std::process::Child>>>,
+    pub child: Arc<Mutex<Option<std::process::Child>>>,
     pub ui_session: Arc<Mutex<UiSession>>,
 }
 
 impl AppState {
     pub fn new() -> Self {
         Self {
-            abort:   Arc::new(AtomicBool::new(false)),
+            abort: Arc::new(AtomicBool::new(false)),
             running: Arc::new(AtomicBool::new(false)),
-            child:   Arc::new(Mutex::new(None)),
+            child: Arc::new(Mutex::new(None)),
             ui_session: Arc::new(Mutex::new(UiSession::default())),
         }
     }
@@ -204,9 +204,19 @@ fn bundled_aria2_names() -> &'static [&'static str] {
         &["aria2c-aarch64-unknown-linux-gnu", "aria2c"]
     }
     #[cfg(not(any(
-        all(target_os = "windows", target_arch = "x86_64", any(target_env = "msvc", target_env = "gnu")),
-        all(target_os = "macos", any(target_arch = "x86_64", target_arch = "aarch64")),
-        all(target_os = "linux", any(target_arch = "x86_64", target_arch = "aarch64"))
+        all(
+            target_os = "windows",
+            target_arch = "x86_64",
+            any(target_env = "msvc", target_env = "gnu")
+        ),
+        all(
+            target_os = "macos",
+            any(target_arch = "x86_64", target_arch = "aarch64")
+        ),
+        all(
+            target_os = "linux",
+            any(target_arch = "x86_64", target_arch = "aarch64")
+        )
     )))]
     {
         &[aria2_binary_name()]
@@ -236,26 +246,256 @@ fn find_on_path(binary_name: &str) -> Option<PathBuf> {
     None
 }
 
-fn resolve_aria2_path(app: &AppHandle) -> Option<PathBuf> {
-    // 1. Tauri bundled external binary/resource.
-    if let Ok(dir) = app.path().resource_dir() {
-        if let Some(path) = executable_candidates(&dir).find(|p| p.is_file()) {
-            return Some(path);
-        }
+#[derive(Debug, Clone)]
+struct Aria2Runtime {
+    path: PathBuf,
+    source: &'static str,
+    version: String,
+}
+
+#[derive(Debug, Clone)]
+struct Aria2ResolutionError {
+    message: String,
+    diagnostics: Vec<String>,
+}
+
+fn trim_diagnostic(text: &str) -> String {
+    let clean = text.trim();
+    if clean.len() <= MAX_DIAGNOSTIC_CHARS {
+        clean.to_string()
+    } else {
+        format!("{}...", &clean[..MAX_DIAGNOSTIC_CHARS])
     }
-    // 2. Next to the running executable
+}
+
+fn output_text(output: &Output) -> String {
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    trim_diagnostic(&format!(
+        "exit={}; stdout={}; stderr={}",
+        output.status,
+        stdout.trim(),
+        stderr.trim()
+    ))
+}
+
+fn friendly_aria2_failure(path: &Path, raw: &str) -> String {
+    let lower = raw.to_ascii_lowercase();
+    if lower.contains("libaria2.so.0") {
+        return format!(
+            "aria2c failed to start: missing libaria2.so.0 (path: {})",
+            path.display()
+        );
+    }
+    if lower.contains("permission denied") {
+        return format!(
+            "aria2c failed to start: permission denied ({})",
+            path.display()
+        );
+    }
+    if lower.contains("no such file") || lower.contains("not found") {
+        return format!(
+            "aria2c failed to start: missing runtime dependency ({})",
+            path.display()
+        );
+    }
+    format!("aria2c validation failed at {}: {}", path.display(), raw)
+}
+
+fn validate_aria2_candidate(path: PathBuf, source: &'static str) -> Result<Aria2Runtime, String> {
+    if !path.is_file() {
+        return Err(format!(
+            "{} candidate is not a file: {}",
+            source,
+            path.display()
+        ));
+    }
+
+    match Command::new(&path)
+        .arg("--version")
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .output()
+    {
+        Ok(output) if output.status.success() => {
+            let stdout = String::from_utf8_lossy(&output.stdout);
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            let version = stdout
+                .lines()
+                .chain(stderr.lines())
+                .find(|line| !line.trim().is_empty())
+                .unwrap_or("aria2c --version succeeded")
+                .trim()
+                .to_string();
+            Ok(Aria2Runtime {
+                path,
+                source,
+                version,
+            })
+        }
+        Ok(output) => {
+            let raw = output_text(&output);
+            Err(friendly_aria2_failure(&path, &raw))
+        }
+        Err(err) => Err(format!(
+            "aria2c failed to start at {}: {}",
+            path.display(),
+            err
+        )),
+    }
+}
+
+fn bundled_aria2_candidates(app: &AppHandle) -> Vec<PathBuf> {
+    let mut candidates = Vec::new();
+    if let Ok(dir) = app.path().resource_dir() {
+        candidates.extend(executable_candidates(&dir).filter(|p| p.is_file()));
+    }
+
     if let Ok(exe) = std::env::current_exe() {
         if let Some(dir) = exe.parent() {
-            if let Some(path) = executable_candidates(dir).find(|p| p.is_file()) {
-                return Some(path);
-            }
+            candidates.extend(executable_candidates(dir).filter(|p| p.is_file()));
         }
     }
-    // 3. Developer fallback from PATH.
-    if let Some(path) = find_on_path(aria2_binary_name()) {
-        return Some(path);
+
+    candidates
+}
+
+fn resolve_aria2(app: &AppHandle) -> Result<Aria2Runtime, Aria2ResolutionError> {
+    let mut diagnostics = Vec::new();
+
+    #[cfg(target_os = "linux")]
+    {
+        if let Some(path) = find_on_path(aria2_binary_name()) {
+            match validate_aria2_candidate(path, "system PATH") {
+                Ok(runtime) => return Ok(runtime),
+                Err(err) => diagnostics.push(err),
+            }
+        } else {
+            diagnostics.push("system aria2c not found on PATH".into());
+        }
+
+        for path in bundled_aria2_candidates(app) {
+            match validate_aria2_candidate(path, "bundled sidecar") {
+                Ok(runtime) => return Ok(runtime),
+                Err(err) => diagnostics.push(err),
+            }
+        }
+
+        return Err(Aria2ResolutionError {
+            message: "aria2c not found or not usable. Install it with: sudo apt install aria2"
+                .into(),
+            diagnostics,
+        });
+    }
+
+    #[cfg(not(target_os = "linux"))]
+    {
+        for path in bundled_aria2_candidates(app) {
+            match validate_aria2_candidate(path, "bundled sidecar") {
+                Ok(runtime) => return Ok(runtime),
+                Err(err) => diagnostics.push(err),
+            }
+        }
+
+        if let Some(path) = find_on_path(aria2_binary_name()) {
+            match validate_aria2_candidate(path, "system PATH") {
+                Ok(runtime) => return Ok(runtime),
+                Err(err) => diagnostics.push(err),
+            }
+        } else {
+            diagnostics.push(format!("{} not found on PATH", aria2_binary_name()));
+        }
+
+        Err(Aria2ResolutionError {
+            message: format!("{} not found or not usable.", aria2_binary_name()),
+            diagnostics,
+        })
+    }
+}
+
+fn resolve_aria2_path(app: &AppHandle) -> Option<PathBuf> {
+    resolve_aria2(app).ok().map(|runtime| runtime.path)
+}
+
+fn validate_output_dir(dir: &str) -> Result<(), String> {
+    let path = Path::new(dir);
+    if !path.is_dir() {
+        return Err(format!("output directory does not exist: {dir}"));
+    }
+
+    let test_path = path.join(format!(".aria2-manager-write-test-{}", std::process::id()));
+    match OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(&test_path)
+    {
+        Ok(_) => {
+            let _ = fs::remove_file(&test_path);
+            Ok(())
+        }
+        Err(err) => Err(format!("output directory is not writable: {dir} ({err})")),
+    }
+}
+
+fn summarize_failure_line(line: &str) -> Option<String> {
+    let lower = line.to_ascii_lowercase();
+    if lower.contains("libaria2.so.0") {
+        return Some("aria2c failed to start: missing libaria2.so.0".into());
+    }
+    if lower.contains("permission denied") {
+        return Some("permission denied".into());
+    }
+    if lower.contains("status=403") || lower.contains(" 403") {
+        return Some("HTTP 403 forbidden".into());
+    }
+    if lower.contains("status=404") || lower.contains(" 404") || lower.contains("not found") {
+        return Some("HTTP 404 not found".into());
+    }
+    if lower.contains("certificate") || lower.contains("tls") || lower.contains("ssl") {
+        return Some("TLS certificate error".into());
+    }
+    if lower.contains("timed out") || lower.contains("timeout") {
+        return Some("network timeout".into());
+    }
+    if lower.contains("error") || lower.contains("failed") || lower.contains("exception") {
+        return Some(trim_diagnostic(line));
     }
     None
+}
+
+fn build_failure_detail(
+    error: &crate::classifier::ErrorCode,
+    exit_code: i32,
+    stderr_lines: &[String],
+    output_lines: &[String],
+) -> String {
+    for line in stderr_lines.iter().rev().chain(output_lines.iter().rev()) {
+        if let Some(summary) = summarize_failure_line(line) {
+            return format!("{summary}; exit code {exit_code}");
+        }
+    }
+
+    let recent = stderr_lines
+        .iter()
+        .rev()
+        .chain(output_lines.iter().rev())
+        .take(3)
+        .cloned()
+        .collect::<Vec<_>>()
+        .join(" | ");
+
+    if recent.is_empty() {
+        format!(
+            "error={}; exit code {exit_code}; no aria2 output captured",
+            error.as_str()
+        )
+    } else {
+        format!(
+            "error={}; exit code {exit_code}; recent output: {}",
+            error.as_str(),
+            trim_diagnostic(&recent)
+        )
+    }
 }
 
 // ── Emit helpers ──────────────────────────────────────────────────────────────
@@ -265,13 +505,13 @@ fn emit_log(app: &AppHandle, text: &str, kind: &str) {
         return;
     }
     let color = match kind {
-        "ok"       => "#28C76F",
-        "err"      => "#FF4040",
-        "warn"     => "#F0A500",
-        "info"     => "#3D7FFF",
-        "retry"    => "#A855F7",
+        "ok" => "#28C76F",
+        "err" => "#FF4040",
+        "warn" => "#F0A500",
+        "info" => "#3D7FFF",
+        "retry" => "#A855F7",
         "strategy" => "#22D3EE",
-        _          => "#7A9CBF", // base
+        _ => "#7A9CBF", // base
     };
     let _ = app.emit("log-line", json!({ "text": text, "color": color }));
 }
@@ -459,7 +699,9 @@ fn emit_progress_events(
     }
 
     let last_progress_pct = g.event_state.last_progress_percent.unwrap_or(0);
-    if pct >= last_progress_pct.saturating_add(5) && now.saturating_sub(g.event_state.last_progress_emit_ms) >= 10_000 {
+    if pct >= last_progress_pct.saturating_add(5)
+        && now.saturating_sub(g.event_state.last_progress_emit_ms) >= 10_000
+    {
         let mut milestone_parts = vec![format!("{pct}%")];
         if let Some(spd) = speed {
             milestone_parts.push(format!("{spd}"));
@@ -489,9 +731,9 @@ fn emit_progress_events(
         let abs_ok = diff >= 512.0;
         let rel_ok = rel >= 0.15;
         if (abs_ok || rel_ok) && now.saturating_sub(g.event_state.last_speed_emit_ms) >= 3_000 {
-            let detail = speed.map(|s| s.to_string()).or_else(|| {
-                Some(format!("{:.2} MiB/s", sk / 1024.0))
-            });
+            let detail = speed
+                .map(|s| s.to_string())
+                .or_else(|| Some(format!("{:.2} MiB/s", sk / 1024.0)));
             emit_event(
                 app,
                 &make_event(
@@ -533,63 +775,95 @@ fn emit_progress_events(
 // ── Download loop (runs on a dedicated thread) ────────────────────────────────
 
 fn run_download_loop(
-    app:     AppHandle,
-    url:     String,
-    dir:     String,
-    abort:   Arc<AtomicBool>,
+    app: AppHandle,
+    url: String,
+    dir: String,
+    abort: Arc<AtomicBool>,
     child_slot: Arc<Mutex<Option<std::process::Child>>>,
     running: Arc<AtomicBool>,
     ui_session: Arc<Mutex<UiSession>>,
 ) {
-    let aria2_path = match resolve_aria2_path(&app) {
-        Some(path) => path,
-        None => {
+    let runtime = match resolve_aria2(&app) {
+        Ok(runtime) => runtime,
+        Err(err) => {
             emit_transfer_update(&app, &ui_session, 0, None, None, None, None, "error");
             emit_event(
                 &app,
                 &make_event(
                     EventType::DownloadFailed,
                     EventCategory::Error,
-                    format!("{} not found", aria2_binary_name()),
-                    Some("No bundled or PATH aria2 executable was found.".into()),
+                    format!("{} not usable", aria2_binary_name()),
+                    Some(format!(
+                        "{}{}",
+                        err.message,
+                        if err.diagnostics.is_empty() {
+                            String::new()
+                        } else {
+                            format!(" | diagnostics: {}", err.diagnostics.join(" | "))
+                        }
+                    )),
                     None,
                     Some(LOG_GROUP.into()),
                 ),
             );
-            emit_log(&app, &format!("[FATAL] {} not found", aria2_binary_name()), "err");
+            emit_log(&app, &format!("[FATAL] {}", err.message), "err");
             emit_status(&app, "aria2 not found", "err");
             let _ = app.emit("finished", false);
             running.store(false, Ordering::SeqCst);
             return;
         }
     };
+    let aria2_path = runtime.path.clone();
 
-    if !aria2_path.exists() {
+    if let Err(err) = validate_output_dir(&dir) {
         emit_transfer_update(&app, &ui_session, 0, None, None, None, None, "error");
         emit_event(
             &app,
             &make_event(
                 EventType::DownloadFailed,
                 EventCategory::Error,
-                format!("{} not found", aria2_binary_name()),
-                Some(format!("Path: {}", aria2_path.display())),
+                "Output directory not writable",
+                Some(err.clone()),
                 None,
                 Some(LOG_GROUP.into()),
             ),
         );
-        emit_log(&app, &format!("[FATAL] {} not found at: {}", aria2_binary_name(), aria2_path.display()), "err");
-        emit_status(&app, "aria2 not found", "err");
+        emit_status(&app, "Output directory not writable", "err");
         let _ = app.emit("finished", false);
         running.store(false, Ordering::SeqCst);
         return;
     }
 
-    let strategies   = build_strategies(&url);
-    let mut attempt  = 0usize;
+    let cwd = env::current_dir()
+        .map(|p| p.display().to_string())
+        .unwrap_or_else(|_| "<unknown>".into());
+    emit_event(
+        &app,
+        &make_event(
+            EventType::MetadataUpdated,
+            EventCategory::Info,
+            "aria2 diagnostics",
+            Some(format!(
+                "source={}; path={}; version={}; cwd={}; output={}",
+                runtime.source,
+                aria2_path.display(),
+                runtime.version,
+                cwd,
+                dir
+            )),
+            None,
+            Some(LOG_GROUP.into()),
+        ),
+    );
+
+    let strategies = build_strategies(&url);
+    let mut attempt = 0usize;
     let mut classifier = ErrorClassifier::new();
 
     loop {
-        if abort.load(Ordering::SeqCst) { break; }
+        if abort.load(Ordering::SeqCst) {
+            break;
+        }
 
         let strat = &strategies[attempt];
 
@@ -601,11 +875,14 @@ fn run_download_loop(
         }
 
         // Announce strategy
-        let _ = app.emit("strategy-changed", json!({
-            "attempt":     attempt + 1,
-            "name":        strat.name,
-            "description": strat.description,
-        }));
+        let _ = app.emit(
+            "strategy-changed",
+            json!({
+                "attempt":     attempt + 1,
+                "name":        strat.name,
+                "description": strat.description,
+            }),
+        );
         if attempt > 0 {
             emit_event(
                 &app,
@@ -619,7 +896,11 @@ fn run_download_loop(
                 ),
             );
         }
-        emit_status(&app, &format!("[Attempt {}]  {} — connecting…", attempt + 1, strat.name), "dl");
+        emit_status(
+            &app,
+            &format!("[Attempt {}]  {} — connecting…", attempt + 1, strat.name),
+            "dl",
+        );
         emit_transfer_update(&app, &ui_session, 0, None, None, None, None, "connecting");
         classifier.reset();
 
@@ -627,13 +908,24 @@ fn run_download_loop(
         let mut args: Vec<String> = BASE_ARGS.iter().map(|s| s.to_string()).collect();
         args.extend(strat.args.clone());
         args.extend(["-d".into(), dir.clone(), url.clone()]);
+        emit_event(
+            &app,
+            &make_event(
+                EventType::MetadataUpdated,
+                EventCategory::Info,
+                "aria2 command",
+                Some(format!("{} {}", aria2_path.display(), args.join(" "))),
+                Some("aria2-command".into()),
+                Some(LOG_GROUP.into()),
+            ),
+        );
 
         // Launch subprocess
         #[allow(unused_mut)]
         let mut cmd = Command::new(&aria2_path);
         cmd.args(&args)
-           .stdout(Stdio::piped())
-           .stderr(Stdio::piped());
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped());
 
         #[cfg(target_os = "windows")]
         {
@@ -670,12 +962,12 @@ fn run_download_loop(
         *child_slot.lock().unwrap() = Some(child);
 
         // Merge stdout + stderr — aria2 may emit summaries on either stream depending on build/options.
-        let (tx, rx) = mpsc::channel::<String>();
+        let (tx, rx) = mpsc::channel::<(String, bool)>();
         let tx_out = tx.clone();
         thread::spawn(move || {
             let r = BufReader::new(stdout);
             for raw in r.lines().flatten() {
-                if tx_out.send(raw).is_err() {
+                if tx_out.send((raw, false)).is_err() {
                     break;
                 }
             }
@@ -684,14 +976,17 @@ fn run_download_loop(
         thread::spawn(move || {
             let r = BufReader::new(stderr);
             for raw in r.lines().flatten() {
-                if tx_err.send(raw).is_err() {
+                if tx_err.send((raw, true)).is_err() {
                     break;
                 }
             }
         });
         drop(tx);
 
-        for raw in rx {
+        let mut output_lines: Vec<String> = Vec::new();
+        let mut stderr_lines: Vec<String> = Vec::new();
+
+        for (raw, is_stderr) in rx {
             if abort.load(Ordering::SeqCst) {
                 break;
             }
@@ -699,6 +994,17 @@ fn run_download_loop(
             let clean = clean.trim().to_string();
             if clean.is_empty() {
                 continue;
+            }
+
+            output_lines.push(clean.clone());
+            if output_lines.len() > 40 {
+                output_lines.remove(0);
+            }
+            if is_stderr {
+                stderr_lines.push(clean.clone());
+                if stderr_lines.len() > 40 {
+                    stderr_lines.remove(0);
+                }
             }
 
             classifier.feed(&clean);
@@ -756,18 +1062,26 @@ fn run_download_loop(
         }
 
         // Failure — classify and decide next strategy
-        let error     = classifier.classify();
+        let error = classifier.classify();
         let preferred = error.preferred_strategy();
 
         emit_log(
             &app,
-            &format!("\n[DIAGNOSE] error={} → preferred strategy index={preferred}", error.as_str()),
+            &format!(
+                "\n[DIAGNOSE] error={} → preferred strategy index={preferred}",
+                error.as_str()
+            ),
             "warn",
         );
 
-        let next_attempt = if preferred > attempt { preferred } else { attempt + 1 };
+        let next_attempt = if preferred > attempt {
+            preferred
+        } else {
+            attempt + 1
+        };
 
         if next_attempt >= strategies.len() {
+            let detail = build_failure_detail(&error, exit_code, &stderr_lines, &output_lines);
             emit_transfer_update(&app, &ui_session, 0, None, None, None, None, "error");
             emit_event(
                 &app,
@@ -775,7 +1089,7 @@ fn run_download_loop(
                     EventType::DownloadFailed,
                     EventCategory::Error,
                     "All strategies failed",
-                    Some(format!("error={} (attempts exhausted)", error.as_str())),
+                    Some(detail),
                     None,
                     Some(LOG_GROUP.into()),
                 ),
@@ -789,7 +1103,11 @@ fn run_download_loop(
 
         attempt = next_attempt;
         let next = &strategies[attempt];
-        emit_log(&app, &format!("[RETRY] → {}: {}", next.name, next.description), "retry");
+        emit_log(
+            &app,
+            &format!("[RETRY] → {}: {}", next.name, next.description),
+            "retry",
+        );
         emit_status(&app, &format!("Retrying with: {}…", next.name), "retry");
         // loop continues with new attempt index
     }
@@ -818,9 +1136,7 @@ fn dispatch_line(app: &AppHandle, line: &str, ui: &Arc<Mutex<UiSession>>) {
         let total = caps.name("total").map(|m| m.as_str());
         let spd = caps.name("spd").map(|m| m.as_str());
         let eta = caps.name("eta").map(|m| m.as_str());
-        let cn = caps
-            .name("cn")
-            .and_then(|m| m.as_str().parse::<u32>().ok());
+        let cn = caps.name("cn").and_then(|m| m.as_str().parse::<u32>().ok());
         emit_transfer_update(app, ui, pct, spd, eta, dl, total, "downloading");
         emit_status(app, &format!("Downloading… {pct}%"), "dl");
         emit_progress_events(app, ui, pct, spd, eta, cn);
@@ -834,9 +1150,7 @@ fn dispatch_line(app: &AppHandle, line: &str, ui: &Arc<Mutex<UiSession>>) {
             .unwrap_or(0);
         let dl = caps.name("dl").map(|m| m.as_str());
         let total = caps.name("total").map(|m| m.as_str());
-        let cn = caps
-            .name("cn")
-            .and_then(|m| m.as_str().parse::<u32>().ok());
+        let cn = caps.name("cn").and_then(|m| m.as_str().parse::<u32>().ok());
         emit_transfer_update(app, ui, pct, None, None, dl, total, "downloading");
         emit_status(app, &format!("Downloading… {pct}%"), "dl");
         emit_progress_events(app, ui, pct, None, None, cn);
@@ -919,10 +1233,10 @@ fn dispatch_line(app: &AppHandle, line: &str, ui: &Arc<Mutex<UiSession>>) {
 
 #[tauri::command]
 pub fn start_download(
-    app:   AppHandle,
+    app: AppHandle,
     state: tauri::State<'_, AppState>,
-    url:   String,
-    dir:   String,
+    url: String,
+    dir: String,
 ) -> Result<(), String> {
     if state.running.load(Ordering::SeqCst) {
         return Err("A download is already running".into());
@@ -964,10 +1278,10 @@ pub fn start_download(
     state.abort.store(false, Ordering::SeqCst);
     state.running.store(true, Ordering::SeqCst);
 
-    let abort       = state.abort.clone();
-    let child       = state.child.clone();
-    let running     = state.running.clone();
-    let ui_session  = state.ui_session.clone();
+    let abort = state.abort.clone();
+    let child = state.child.clone();
+    let running = state.running.clone();
+    let ui_session = state.ui_session.clone();
 
     std::thread::spawn(move || {
         run_download_loop(app, url, dir, abort, child, running, ui_session);

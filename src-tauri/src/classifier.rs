@@ -23,15 +23,15 @@ pub enum ErrorCode {
 impl ErrorCode {
     pub fn as_str(&self) -> &'static str {
         match self {
-            ErrorCode::None         => "none",
+            ErrorCode::None => "none",
             ErrorCode::Forbidden403 => "403",
-            ErrorCode::NotFound404  => "404",
-            ErrorCode::RedirectErr  => "redirect",
-            ErrorCode::SslError     => "ssl",
-            ErrorCode::Timeout      => "timeout",
-            ErrorCode::Network      => "network",
-            ErrorCode::Checksum     => "checksum",
-            ErrorCode::Unknown      => "unknown",
+            ErrorCode::NotFound404 => "404",
+            ErrorCode::RedirectErr => "redirect",
+            ErrorCode::SslError => "ssl",
+            ErrorCode::Timeout => "timeout",
+            ErrorCode::Network => "network",
+            ErrorCode::Checksum => "checksum",
+            ErrorCode::Unknown => "unknown",
         }
     }
 
@@ -39,14 +39,14 @@ impl ErrorCode {
     pub fn preferred_strategy(&self) -> usize {
         match self {
             ErrorCode::Forbidden403 => 1,
-            ErrorCode::RedirectErr  => 1,
-            ErrorCode::NotFound404  => 1,
-            ErrorCode::SslError     => 5,
-            ErrorCode::Timeout      => 4,
-            ErrorCode::Network      => 4,
-            ErrorCode::Checksum     => 1,
-            ErrorCode::Unknown      => 1,
-            ErrorCode::None         => 0,
+            ErrorCode::RedirectErr => 1,
+            ErrorCode::NotFound404 => 1,
+            ErrorCode::SslError => 5,
+            ErrorCode::Timeout => 4,
+            ErrorCode::Network => 4,
+            ErrorCode::Checksum => 1,
+            ErrorCode::Unknown => 1,
+            ErrorCode::None => 0,
         }
     }
 }
@@ -55,15 +55,39 @@ impl ErrorCode {
 
 static RULES: Lazy<Vec<(Regex, ErrorCode)>> = Lazy::new(|| {
     vec![
-        (Regex::new(r"status=403|errorCode=22.*403|HTTP/[\d.]* 403").unwrap(),       ErrorCode::Forbidden403),
-        (Regex::new(r"status=404|HTTP/[\d.]* 404|Not Found").unwrap(),               ErrorCode::NotFound404),
-        (Regex::new(r"(?i)Redirecting to.*\b(403|404|error|login|auth)\b").unwrap(), ErrorCode::RedirectErr),
-        (Regex::new(r"errorCode=22").unwrap(),                                        ErrorCode::RedirectErr),
-        (Regex::new(r"(?i)SSL|TLS|certificate|handshake").unwrap(),                  ErrorCode::SslError),
-        (Regex::new(r"(?i)timed?\s?out|ETIMEDOUT|Connection reset").unwrap(),        ErrorCode::Timeout),
-        (Regex::new(r"(?i)ENETUNREACH|ECONNREFUSED|Network is unreachable").unwrap(),ErrorCode::Network),
-        (Regex::new(r"(?i)checksum|CRC|hash mismatch").unwrap(),                     ErrorCode::Checksum),
-        (Regex::new(r"\bERROR\b|\berror\b").unwrap(),                                ErrorCode::Unknown),
+        (
+            Regex::new(r"status=403|errorCode=22.*403|HTTP/[\d.]* 403").unwrap(),
+            ErrorCode::Forbidden403,
+        ),
+        (
+            Regex::new(r"status=404|HTTP/[\d.]* 404|Not Found").unwrap(),
+            ErrorCode::NotFound404,
+        ),
+        (
+            Regex::new(r"(?i)Redirecting to.*\b(403|404|error|login|auth)\b").unwrap(),
+            ErrorCode::RedirectErr,
+        ),
+        (Regex::new(r"errorCode=22").unwrap(), ErrorCode::RedirectErr),
+        (
+            Regex::new(r"(?i)SSL|TLS|certificate|handshake").unwrap(),
+            ErrorCode::SslError,
+        ),
+        (
+            Regex::new(r"(?i)timed?\s?out|ETIMEDOUT|Connection reset").unwrap(),
+            ErrorCode::Timeout,
+        ),
+        (
+            Regex::new(r"(?i)ENETUNREACH|ECONNREFUSED|Network is unreachable").unwrap(),
+            ErrorCode::Network,
+        ),
+        (
+            Regex::new(r"(?i)checksum|CRC|hash mismatch").unwrap(),
+            ErrorCode::Checksum,
+        ),
+        (
+            Regex::new(r"\bERROR\b|\berror\b").unwrap(),
+            ErrorCode::Unknown,
+        ),
     ]
 });
 
@@ -86,7 +110,9 @@ pub struct ErrorClassifier {
 
 impl ErrorClassifier {
     pub fn new() -> Self {
-        Self { seen: HashSet::new() }
+        Self {
+            seen: HashSet::new(),
+        }
     }
 
     /// Feed one cleaned (ANSI-stripped) output line.

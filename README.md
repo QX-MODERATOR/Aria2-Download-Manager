@@ -22,7 +22,7 @@ Aria2 Download Manager is a desktop download manager powered by aria2. It provid
 
 - Windows: download the installer from GitHub Releases when a release is available.
 - macOS: download the app or DMG bundle from GitHub Releases when available.
-- Linux: download the AppImage, DEB, or RPM bundle from GitHub Releases when available.
+- Linux: download the AppImage, DEB, or RPM bundle from GitHub Releases when available. The DEB package depends on `aria2`; AppImage users should install it with `sudo apt install aria2` if it is not already available.
 - If no release is available, build from source using the instructions below.
 
 ## Usage
@@ -55,10 +55,11 @@ npm run tauri build
 
 For platform-specific dependencies and release steps, see [BUILD.md](BUILD.md).
 
-## Sidecar Binaries (aria2)
+## Download Engine (aria2)
 
 - Windows: this repo includes `src-tauri/bin/aria2c-x86_64-pc-windows-msvc.exe` for out-of-the-box builds.
-- macOS/Linux: provide the target sidecar in `src-tauri/bin/` (the build scripts can copy a system-installed aria2c into place).
+- macOS: provide the target sidecar in `src-tauri/bin/`; the build script can copy a system-installed aria2c into place.
+- Linux: the app uses the system `aria2c` first and validates it with `aria2c --version`. Install it with `sudo apt install aria2`.
 
 ## Platform Support
 

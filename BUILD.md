@@ -10,7 +10,8 @@ This document covers prerequisites, platform-specific build steps, sidecar binar
 - Tauri config: src-tauri/tauri.conf.json
 - macOS config merge: src-tauri/tauri.macos.conf.json
 - Linux config merge: src-tauri/tauri.linux.conf.json
-- Sidecar binaries live under src-tauri/bin and use Tauri externalBin naming.
+- Windows and macOS sidecar binaries live under src-tauri/bin and use Tauri externalBin naming.
+- Linux packages use the system `aria2c` from the `aria2` package instead of bundling a sidecar.
 
 ## Sidecar Binaries (aria2)
 
@@ -20,12 +21,11 @@ Required sidecar names by target:
 src-tauri/bin/aria2c-x86_64-pc-windows-msvc.exe
 src-tauri/bin/aria2c-x86_64-apple-darwin
 src-tauri/bin/aria2c-aarch64-apple-darwin
-src-tauri/bin/aria2c-x86_64-unknown-linux-gnu
-src-tauri/bin/aria2c-aarch64-unknown-linux-gnu
 ```
 
 - Windows: this repo includes src-tauri/bin/aria2c-x86_64-pc-windows-msvc.exe.
-- macOS/Linux: provide the target sidecar in src-tauri/bin. The build scripts can copy a system-installed aria2c into place.
+- macOS: provide the target sidecar in src-tauri/bin. The build script can copy a system-installed aria2c into place.
+- Linux: install `aria2` on the target system. The `.deb` package declares this dependency.
 
 ## Prerequisites (All Platforms)
 
@@ -122,7 +122,8 @@ src-tauri/target/release/bundle/rpm/*.rpm
 
 ## Troubleshooting
 
-- Missing aria2 sidecar: place the correct binary in src-tauri/bin for your target.
+- Missing Linux download engine: install `aria2` with `sudo apt install aria2`.
+- Broken Linux aria2 engine: run `which aria2c`, `aria2c --version`, and `ldd "$(which aria2c)"`.
 - macOS icon missing: ensure `src-tauri/icons/icon.icns` exists.
 - Linux rpm build fails: install rpmbuild or set TAURI_BUNDLES=appimage,deb.
 - WebView2 not found on Windows: install the WebView2 runtime from Microsoft.

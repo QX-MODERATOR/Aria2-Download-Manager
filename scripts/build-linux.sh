@@ -10,11 +10,8 @@ if [[ "$(uname -s)" != "Linux" ]]; then
 fi
 
 BUNDLES="${TAURI_BUNDLES:-appimage,deb,rpm}"
-BIN_DIR="$ROOT_DIR/src-tauri/bin"
 HOST_TRIPLE="$(rustc -Vv | awk '/host:/ { print $2 }')"
-SIDECAR="$BIN_DIR/aria2c-$HOST_TRIPLE"
 
-mkdir -p "$BIN_DIR"
 echo "Building Linux bundles: $BUNDLES"
 echo "Rust host triple: $HOST_TRIPLE"
 
@@ -25,17 +22,11 @@ for tool in cargo npm rustc; do
   fi
 done
 
-if [[ ! -f "$SIDECAR" ]]; then
-  if command -v aria2c >/dev/null 2>&1; then
-    echo "Copying aria2 sidecar to src-tauri/bin/aria2c-$HOST_TRIPLE"
-    cp "$(command -v aria2c)" "$SIDECAR"
-  else
-    echo "Missing aria2 sidecar: $SIDECAR" >&2
-    echo "Install aria2, then rerun this script so it can copy the native executable." >&2
-    exit 1
-  fi
+if ! command -v aria2c >/dev/null 2>&1; then
+  echo "Missing system aria2c. Install aria2 before building Linux packages." >&2
+  exit 1
 fi
-chmod +x "$SIDECAR"
+aria2c --version | head -n 1
 
 if [[ "$BUNDLES" == *rpm* ]] && ! command -v rpmbuild >/dev/null 2>&1; then
   echo "rpm packaging requested but rpmbuild is missing. Install rpm/rpmbuild or set TAURI_BUNDLES=appimage,deb." >&2
@@ -47,6 +38,16 @@ cargo build --release --manifest-path "$ROOT_DIR/src-tauri/Cargo.toml"
 
 echo "Building Tauri Linux bundles..."
 npm run tauri -- build --bundles "$BUNDLES"
+
+if [[ -f "$ROOT_DIR/src-tauri/target/release/aria2-manager" ]]; then
+  timeout 10s "$ROOT_DIR/src-tauri/target/release/aria2-manager" --version || true
+fi
+
+if find "$ROOT_DIR/src-tauri/target/release/bundle" -type f -name 'aria2c*' | grep -q .; then
+  echo "Linux bundle unexpectedly contains an aria2c sidecar." >&2
+  find "$ROOT_DIR/src-tauri/target/release/bundle" -type f -name 'aria2c*' >&2
+  exit 1
+fi
 
 echo "Linux bundles:"
 echo "  src-tauri/target/release/bundle/appimage/*.AppImage"

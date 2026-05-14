@@ -2,11 +2,14 @@
   "bundle": {
     "targets": ["appimage", "deb", "rpm"],
     "category": "Utility",
+    "externalBin": [],
     "linux": {
       "deb": {
         "depends": [
+          "aria2",
           "libwebkit2gtk-4.1-0",
           "libgtk-3-0",
+          "xdg-utils",
           "libayatana-appindicator3-1"
         ],
         "section": "utils",
