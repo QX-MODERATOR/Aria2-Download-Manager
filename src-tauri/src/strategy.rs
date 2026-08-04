@@ -10,16 +10,8 @@ pub struct Strategy {
 
 // ── User-agent strings ────────────────────────────────────────────────────────
 
-const UA_CHROME: &str = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) \
-     AppleWebKit/537.36 (KHTML, like Gecko) \
-     Chrome/124.0.0.0 Safari/537.36";
-
-const UA_FIREFOX: &str = "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:125.0) \
-     Gecko/20100101 Firefox/125.0";
-
-const UA_EDGE: &str = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) \
-     AppleWebKit/537.36 (KHTML, like Gecko) \
-     Chrome/124.0.0.0 Safari/537.36 Edg/124.0.0.0";
+const UA_DESKTOP: &str = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) \
+     AppleWebKit/537.36 (KHTML, like Gecko) Safari/537.36";
 
 const UA_SAFARI: &str = "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_4_1) \
      AppleWebKit/605.1.15 (KHTML, like Gecko) \
@@ -44,7 +36,7 @@ fn url_origin_referer(url: &str) -> (String, String) {
 
 // ── Browser header builder ────────────────────────────────────────────────────
 
-fn browser_headers(ua: &str, url: &str) -> Vec<String> {
+fn http_headers(ua: &str, url: &str) -> Vec<String> {
     let (origin, referer) = url_origin_referer(url);
     vec![
         format!("--user-agent={ua}"),
@@ -66,55 +58,70 @@ fn browser_headers(ua: &str, url: &str) -> Vec<String> {
 // ── Strategy list ─────────────────────────────────────────────────────────────
 
 pub fn build_strategies(url: &str) -> Vec<Strategy> {
-    let chrome = browser_headers(UA_CHROME, url);
-    let firefox = browser_headers(UA_FIREFOX, url);
-    let edge = browser_headers(UA_EDGE, url);
-    let safari = browser_headers(UA_SAFARI, url);
+    let desktop = http_headers(UA_DESKTOP, url);
+    let safari = http_headers(UA_SAFARI, url);
 
     vec![
+        // ── Safe baseline ────────────────────────────────────────────────────
+        // Single connection avoids CDN range-request stalls caused by parallel
+        // splits (the 80 KiB / freeze pattern seen with multi-connection).
         Strategy {
             name: "Default".into(),
-            description: "Standard aria2 — no custom headers".into(),
-            args: vec![],
+            description: "Single connection — safest starting point; avoids CDN range stalls"
+                .into(),
+            args: vec!["-x".into(), "1".into(), "-s".into(), "1".into()],
         },
         Strategy {
-            name: "Chrome Headers".into(),
-            description: "Chrome UA + Origin/Referer spoof (hotlink bypass)".into(),
-            args: chrome.clone(),
+            name: "Single Connection".into(),
+            description: "Single connection + explicit IPv4 — explicit range-stall bypass".into(),
+            args: vec![
+                "-x".into(),
+                "1".into(),
+                "-s".into(),
+                "1".into(),
+                "--disable-ipv6=true".into(),
+            ],
         },
         Strategy {
-            name: "Firefox Headers".into(),
-            description: "Firefox UA + browser headers".into(),
-            args: firefox,
+            name: "IPv4 Only".into(),
+            description: "Explicit IPv4, default connection count — isolates IPv6 routing issues"
+                .into(),
+            args: vec!["--disable-ipv6=true".into()],
         },
         Strategy {
-            name: "Edge Headers".into(),
-            description: "Microsoft Edge UA + browser headers".into(),
-            args: edge,
+            name: "Reduced Split".into(),
+            description: "4 connections, 4 splits — standard parallel download attempt".into(),
+            args: vec!["-x".into(), "4".into(), "-s".into(), "4".into()],
+        },
+        // ── Header / UA spoofing ─────────────────────────────────────────────
+        Strategy {
+            name: "Desktop Headers".into(),
+            description: "Desktop UA + Origin/Referer spoof (hotlink bypass)".into(),
+            args: desktop.clone(),
         },
         Strategy {
-            name: "Chrome / 1-conn".into(),
-            description: "Chrome headers + single connection to avoid CDN rate-limits".into(),
+            name: "Desktop / 1-conn".into(),
+            description: "Desktop headers + single connection to avoid CDN rate-limits".into(),
             args: {
-                let mut a = chrome.clone();
+                let mut a = desktop.clone();
                 a.extend(["-x".into(), "1".into(), "-s".into(), "1".into()]);
                 a
             },
         },
         Strategy {
-            name: "Chrome / Skip-TLS".into(),
-            description: "Chrome headers + TLS certificate check disabled".into(),
+            name: "Desktop / Skip-TLS".into(),
+            description: "Desktop headers + TLS certificate check disabled".into(),
             args: {
-                let mut a = chrome.clone();
+                let mut a = desktop.clone();
                 a.push("--check-certificate=false".into());
                 a
             },
         },
         Strategy {
-            name: "Chrome / HTTP1.1".into(),
-            description: "Chrome headers + HTTP/1.1 forced, no keep-alive".into(),
+            name: "Desktop / HTTP1.1".into(),
+            description: "Desktop headers + HTTP/1.1 forced, no keep-alive".into(),
             args: {
-                let mut a = chrome.clone();
+                let mut a = desktop.clone();
                 a.extend([
                     "--http-no-cache=true".into(),
                     "--header=Connection: close".into(),

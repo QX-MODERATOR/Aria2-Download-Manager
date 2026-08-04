@@ -75,6 +75,10 @@ html, body {
   from { background-position: 0 0; }
   to   { background-position: 40px 40px; }
 }
+@keyframes badge-breathe {
+  0%, 100% { opacity: 1; filter: brightness(1); box-shadow: 0 0 12px rgba(0,232,122,0.15); }
+  50%       { opacity: 0.85; filter: brightness(1.2); box-shadow: 0 0 20px rgba(0,232,122,0.3); }
+}
 
 /* Scan-line effect */
 #bg-scan {
@@ -91,25 +95,223 @@ html, body {
   );
 }
 
+/* ── Custom title bar ──────────────────────────────────────────────────── */
+.custom-titlebar {
+  flex-shrink: 0;
+  height: 48px;
+  width: 100%;
+  background: rgba(8, 13, 28, 0.86);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-bottom: 1px solid rgba(70, 140, 255, 0.18);
+  box-shadow: 0 1px 18px rgba(45, 130, 255, 0.12);
+  display: flex;
+  align-items: center;
+  user-select: none;
+  position: relative;
+  z-index: 50;
+}
+
+.titlebar-inner {
+  width: 100%;
+  max-width: 1560px;
+  margin: 0 auto;
+  padding: 0 40px;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 100%;
+  gap: 12px;
+  min-width: 0;
+}
+
+/* Draggable region: brand + flexible fill up to window controls */
+.titlebar-left {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  height: 100%;
+}
+
+.titlebar-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  flex: 0 1 auto;
+}
+
+.titlebar-drag-fill {
+  flex: 1 1 auto;
+  min-width: 16px;
+  height: 100%;
+  align-self: stretch;
+}
+
+.titlebar-icon-wrap {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  position: relative;
+  filter: drop-shadow(0 0 8px rgba(45, 130, 255, 0.6));
+}
+
+.titlebar-icon-wrap svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.titlebar-title {
+  color: #4da3ff;
+  font-family: 'Orbitron', monospace;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-shadow: 0 0 12px rgba(45, 130, 255, 0.45);
+}
+
+.titlebar-version {
+  color: rgba(150, 175, 220, 0.55);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  flex-shrink: 0;
+}
+
+.titlebar-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.titlebar-btn {
+  width: 38px;
+  height: 30px;
+  border: 1px solid rgba(75, 120, 190, 0.22);
+  border-radius: 9px;
+  background: rgba(15, 24, 45, 0.72);
+  color: rgba(190, 210, 245, 0.82);
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    background 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease,
+    box-shadow 160ms ease,
+    transform 160ms ease;
+  font-family: 'JetBrains Mono', monospace;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.titlebar-btn:hover {
+  background: rgba(40, 95, 180, 0.28);
+  border-color: rgba(75, 150, 255, 0.45);
+  color: #ffffff;
+  box-shadow: 0 0 14px rgba(45, 130, 255, 0.22);
+}
+
+.titlebar-btn:active {
+  transform: scale(0.96);
+}
+
+.titlebar-btn.close:hover {
+  background: rgba(190, 40, 65, 0.32);
+  border-color: rgba(255, 80, 110, 0.55);
+  color: #ffffff;
+  box-shadow: 0 0 14px rgba(255, 60, 90, 0.28);
+}
+
+.titlebar-btn.is-maximized {
+  font-size: 12px;
+}
+
+@media (max-width: 1200px) {
+  .titlebar-inner {
+    padding-left: 24px;
+    padding-right: 24px;
+  }
+}
+
+@media (max-width: 768px) {
+  .titlebar-inner {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+  .titlebar-version {
+    display: none;
+  }
+  .titlebar-title {
+    font-size: 11px;
+    letter-spacing: 0.08em;
+  }
+  .titlebar-btn {
+    width: 34px;
+    height: 28px;
+  }
+}
+
 /* ── App shell ─────────────────────────────────────────────────────────── */
-#app {
+#app.app-shell {
   position: relative;
   z-index: 1;
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  padding: 16px 20px;
+  width: 100%;
+  min-height: 100vh;
   height: 100vh;
   overflow: hidden;
 }
 
+.app-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  max-width: 1560px;
+  margin: 0 auto;
+  padding: 24px 40px;
+  box-sizing: border-box;
+  min-height: 0;
+  overflow: hidden;
+}
+
+@media (max-width: 1200px) {
+  .app-content {
+    padding-left: 24px;
+    padding-right: 24px;
+  }
+}
+
+@media (max-width: 768px) {
+  .app-content {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+}
+
 @media (max-width: 600px) {
-  #app {
+  #app.app-shell {
     height: auto;
     min-height: 100vh;
     overflow: visible;
-    padding: 12px;
+  }
+  .app-content {
+    padding: 12px 14px;
     gap: 8px;
+    overflow: visible;
   }
 }
 
@@ -146,7 +348,6 @@ html, body {
 .card:hover {
   border-color: var(--border-glow);
   box-shadow: 0 0 30px rgba(61,127,255,0.06), 0 8px 32px rgba(0,0,0,0.4);
-  transform: perspective(1000px) translateZ(2px);
 }
 
 @media (max-width: 600px) {
@@ -256,10 +457,7 @@ html, body {
   border-color: rgba(255,51,85,0.3);
   background: var(--danger-dim);
 }
-@keyframes badge-breathe {
-  0%,100% { box-shadow: 0 0 12px rgba(0,232,122,0.15); }
-  50%      { box-shadow: 0 0 20px rgba(0,232,122,0.3); }
-}
+/* badge-breathe defined above in :root section */
 
 /* ── URL card ──────────────────────────────────────────────────────────── */
 .url-row { display: flex; gap: 8px; align-items: stretch; }
@@ -272,6 +470,7 @@ html, body {
 
 #url-input {
   flex: 1;
+  min-width: 0;
   background: var(--bg-input);
   color: var(--text-hi);
   border: 1px solid var(--border);
@@ -280,6 +479,8 @@ html, body {
   font-size: 12px;
   font-family: 'JetBrains Mono', monospace;
   outline: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
   transition: border-color 0.25s, box-shadow 0.25s, background 0.25s;
 }
 /* url-input:focus defined below with pulse animation */
@@ -297,6 +498,7 @@ html, body {
   letter-spacing: 1.5px;
   cursor: pointer;
   min-width: 130px;
+  flex-shrink: 0;
   font-family: 'Orbitron', monospace;
   transition: all 0.25s ease;
   white-space: nowrap;
@@ -334,6 +536,7 @@ html, body {
   letter-spacing: 1.5px;
   cursor: pointer;
   min-width: 120px;
+  flex-shrink: 0;
   font-family: 'Orbitron', monospace;
   transition: all 0.25s ease;
   white-space: nowrap;
@@ -345,6 +548,47 @@ html, body {
 }
 .btn-danger:active { transform: scale(0.97); }
 .btn-danger:disabled { border-color: var(--border); color: var(--text-lo); cursor: default; box-shadow: none; }
+
+.btn-warning {
+  background: transparent;
+  color: var(--warning);
+  border: 1px solid rgba(255,184,0,0.35);
+  border-radius: 8px;
+  padding: 11px 20px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  cursor: pointer;
+  min-width: 120px;
+  flex-shrink: 0;
+  font-family: 'Orbitron', monospace;
+  transition: all 0.25s ease;
+  white-space: nowrap;
+}
+.btn-warning:hover {
+  background: rgba(255,184,0,0.1);
+  border-color: var(--warning);
+  box-shadow: 0 0 16px rgba(255,184,0,0.25);
+}
+.btn-warning:active { transform: scale(0.97); }
+.btn-warning:disabled { border-color: var(--border); color: var(--text-lo); cursor: default; box-shadow: none; opacity: 0.45; pointer-events: none; }
+
+/* Resume mode — green pulsing button when paused */
+.btn-warning.resume-mode {
+  color: var(--success);
+  border-color: rgba(0,232,122,0.4);
+  background: rgba(0,232,122,0.08);
+  animation: resume-glow 1.8s ease-in-out infinite;
+}
+.btn-warning.resume-mode:hover {
+  background: rgba(0,232,122,0.15);
+  border-color: var(--success);
+  box-shadow: 0 0 20px rgba(0,232,122,0.35);
+}
+@keyframes resume-glow {
+  0%, 100% { box-shadow: 0 0 8px rgba(0,232,122,0.15); }
+  50%      { box-shadow: 0 0 18px rgba(0,232,122,0.35); }
+}
 
 /* ── Strategy card ─────────────────────────────────────────────────────── */
 #strategy-card {
@@ -379,6 +623,12 @@ html, body {
   font-family: 'Orbitron', monospace;
   transition: all 0.3s ease;
 }
+.badge.ffmpeg-ready {
+  background: var(--success-dim);
+  color: var(--success);
+  border-color: rgba(0,232,122,0.3);
+  box-shadow: 0 0 10px rgba(0,232,122,0.15);
+}
 .badge.retry-mode {
   background: rgba(191,127,255,0.08);
   color: var(--retry);
@@ -390,7 +640,7 @@ html, body {
   0%,100% { box-shadow: 0 0 8px rgba(191,127,255,0.15); }
   50%      { box-shadow: 0 0 18px rgba(191,127,255,0.35); }
 }
-#strat-desc { flex: 1; font-size: 11px; color: var(--text-mid); }
+/* #strat-desc styles moved to .engine-card block below */
 .attempt-hdr { font-size: 9px; color: var(--text-lo); letter-spacing: 2px; font-family: 'Orbitron', monospace; }
 #attempt-num { color: var(--accent); font-weight: bold; font-size: 13px; }
 
@@ -467,10 +717,21 @@ html, body {
   padding-top: 6px;
   border-top: 1px solid var(--border);
   margin-top: 2px;
-  word-break: break-all;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
   transition: color 0.2s ease;
+  min-width: 0;
 }
-#current-file .fn { color: var(--text-hi); }
+#current-file .fn {
+  color: var(--text-hi);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: inline-block;
+  max-width: calc(100% - 60px);
+  vertical-align: bottom;
+}
 
 /* ── Stats ─────────────────────────────────────────────────────────────── */
 #stats-card {
@@ -499,8 +760,10 @@ html, body {
   text-align: center;
   position: relative;
   overflow: hidden;
-  transition: border-color 0.3s ease, box-shadow 0.3s ease, transform 0.2s ease;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
   cursor: default;
+  min-height: 52px;
+  min-width: 0;
 }
 .stat-box::before {
   content: '';
@@ -511,12 +774,12 @@ html, body {
   opacity: 0;
   transition: opacity 0.3s ease;
 }
-.stat-box:hover { border-color: var(--border-glow); transform: perspective(500px) translateZ(4px) translateY(-1px); }
+.stat-box:hover { border-color: var(--border-glow); }
 .stat-box:hover::before { opacity: 1; }
 .stat-box.active { border-color: rgba(61,127,255,0.25); }
 
 @media (max-width: 600px) {
-  .stat-box:hover { transform: none; }
+  .stat-box { border-radius: 8px; }
 }
 
 .stat-v {
@@ -570,6 +833,12 @@ html, body {
   background: var(--danger-dim);
   color: var(--danger);
   box-shadow: 0 0 20px rgba(255,51,85,0.1);
+}
+#completion-banner.warn {
+  border-color: rgba(255,184,77,0.35);
+  background: rgba(255,184,77,0.12);
+  color: var(--warning);
+  box-shadow: 0 0 20px rgba(255,184,77,0.12);
 }
 
 /* ── Progress ──────────────────────────────────────────────────────────── */
@@ -655,33 +924,7 @@ html, body {
   width: 100%; height: 100%;
 }
 
-/* ── Log card ──────────────────────────────────────────────────────────── */
-#log-card {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  min-height: 0;
-  overflow: hidden;
-}
-
-@media (max-width: 600px) {
-  #log-card { flex: none; min-height: 200px; }
-  #log { max-height: 200px; }
-}
-.log-top {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 8px;
-  gap: 8px;
-}
-
-.log-top-right {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-left: auto;
-}
+/* ── Small utility button ──────────────────────────────────────────────── */
 .btn-sm {
   background: transparent;
   color: var(--text-lo);
@@ -695,140 +938,22 @@ html, body {
   transition: color 0.2s, border-color 0.2s, box-shadow 0.2s;
 }
 .btn-sm:hover { color: var(--text-mid); border-color: var(--text-mid); box-shadow: 0 0 8px rgba(106,127,154,0.2); }
-
-#log {
-  flex: 1;
-  background: #050810;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 8px 10px;
-  overflow-y: auto;
-  font-size: 11px;
-  line-height: 1.6;
-  white-space: normal;
-  word-break: normal;
-  position: relative;
-}
-/* CRT corner glow */
-#log::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  box-shadow: inset 0 0 30px rgba(0,0,0,0.6);
+.btn-sm:disabled {
+  opacity: 0.45;
+  cursor: default;
   pointer-events: none;
+  box-shadow: none;
 }
-
-/* Log viewport + virtualization */
-#log-viewport {
-  position: relative;
-  min-height: 100%;
+.btn-clear {
+  color: var(--cyan);
+  border-color: rgba(0, 212, 255, 0.32);
+  background: rgba(0, 212, 255, 0.05);
 }
-#log-spacer {
-  width: 100%;
-  height: 0;
+.btn-clear:hover {
+  color: var(--text-hi);
+  border-color: var(--cyan);
+  box-shadow: 0 0 10px rgba(0, 212, 255, 0.22);
 }
-#log-rows {
-  position: relative;
-  left: 0;
-  right: 0;
-  top: 0;
-}
-
-/* Empty state */
-#log-empty {
-  position: absolute;
-  inset: 0;
-  display: none;
-  align-items: center;
-  justify-content: center;
-  color: var(--text-lo);
-  font-size: 11px;
-  letter-spacing: 0.5px;
-}
-#log.empty #log-empty {
-  display: flex;
-}
-
-/* Log rows */
-.log-row {
-  display: grid;
-  grid-template-columns: 60px 16px 1fr;
-  align-items: center;
-  gap: 8px;
-  padding: 2px 6px;
-  border-radius: 6px;
-  opacity: 0.94;
-  transition: background 0.2s ease, opacity 0.2s ease, transform 0.2s ease;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  contain: content;
-  will-change: transform;
-  position: absolute;
-  left: 0;
-  right: 0;
-}
-.log-row:hover {
-  background: rgba(61,127,255,0.06);
-  opacity: 1;
-}
-.log-row.compact .log-details { display: none; }
-
-.log-ts {
-  color: #2A3D55;
-  font-size: 10px;
-  user-select: none;
-}
-.log-icon {
-  font-size: 12px;
-  text-align: center;
-}
-.log-title {
-  color: inherit;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.log-details {
-  color: var(--text-mid);
-  margin-left: 6px;
-}
-
-.log-group {
-  color: var(--text-lo);
-  font-size: 9px;
-  letter-spacing: 1px;
-  margin-right: 6px;
-  text-transform: uppercase;
-}
-
-.log-row.grouped {
-  border-left: 2px solid rgba(61,127,255,0.15);
-  padding-left: 10px;
-}
-.log-row.group-start {
-  border-left-color: rgba(61,127,255,0.5);
-}
-
-/* Categories */
-.log-row.cat-success { color: var(--success); }
-.log-row.cat-warn { color: var(--warning); }
-.log-row.cat-info { color: var(--accent); }
-.log-row.cat-error { color: var(--danger); }
-.log-row.cat-network { color: var(--cyan); }
-.log-row.cat-progress { color: var(--accent); }
-
-/* Entry animation */
-.log-row.appear {
-  animation: log-appear 0.2s ease;
-}
-@keyframes log-appear {
-  from { opacity: 0; transform: translateX(-4px); }
-  to   { opacity: 0.94; transform: translateX(0); }
-}
-
-/* Compact mode on log container */
-#log.compact .log-details { display: none; }
 
 /* ── Input focus glow ring enhancement ───────────────────────────────── */
 #url-input:focus {
@@ -865,7 +990,7 @@ html, body {
 }
 #pct-label[data-full="true"] { text-shadow: 0 0 12px var(--success); }
 
-/* ── Scrollbar global (Firefox) ──────────────────────────────────────── */
+/* ── Scrollbar global ───────────────────────────────────────────────── */
 * { scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
 
 /* ── Completion banner icon animation ────────────────────────────────── */
@@ -889,6 +1014,7 @@ html, body {
 }
 #session-strip.done {
   background: linear-gradient(90deg, rgba(0,232,122,0.02), transparent);
+  border-color: rgba(0, 232, 122, 0.45);
 }
 #session-strip.fail {
   background: linear-gradient(90deg, rgba(255,51,85,0.02), transparent);
@@ -938,6 +1064,139 @@ html, body {
   10%  { opacity: 0.6; transform: translateY(-10px) scale(1); }
   90%  { opacity: 0.3; }
   100% { opacity: 0; transform: translateY(-120px) scale(0.5); }
+}
+
+/* ── Engine / strategy card classes ───────────────────────────────────── */
+.engine-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  min-height: 28px;
+}
+.engine-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+}
+#strat-desc {
+  flex: 1;
+  font-size: 11px;
+  color: var(--text-mid);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+/* ── yt-dlp options ───────────────────────────────────────────────────── */
+.ytdlp-options {
+  display: none;
+  align-items: center;
+  gap: 12px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+.ytdlp-options.visible { display: flex; }
+.ytdlp-options.dimmed { opacity: 0.4; pointer-events: none; }
+.quality-helper {
+  font-size: 9px;
+  color: var(--text-lo);
+  letter-spacing: 0.5px;
+  margin-top: 3px;
+  min-width: 0;
+  white-space: normal;
+}
+.ffmpeg-warning {
+  display: none;
+  font-size: 9px;
+  color: var(--warning);
+  letter-spacing: 0.3px;
+  line-height: 1.35;
+  margin-top: 2px;
+  white-space: normal;
+}
+.ffmpeg-warning.visible { display: block; }
+#quality-select option:disabled { color: var(--text-lo); }
+
+/* ── Quality select ─────────────────────────────────────────────────── */
+#quality-select {
+  background: var(--bg-input);
+  color: var(--text-hi);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 3px 8px;
+  font-size: 10px;
+  font-family: 'Orbitron', sans-serif;
+  outline: none;
+  cursor: pointer;
+  transition: border-color 0.2s ease;
+}
+#quality-select:disabled { opacity: 0.4; cursor: default; }
+#quality-select:focus { border-color: var(--border-focus); }
+
+/* ── Playlist checkbox label ─────────────────────────────────────────── */
+.playlist-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  color: var(--text-mid);
+  cursor: pointer;
+  font-family: 'Orbitron', sans-serif;
+  user-select: none;
+  white-space: nowrap;
+}
+.playlist-label input[type=checkbox] {
+  accent-color: var(--accent);
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+.playlist-label input[type=checkbox]:disabled { opacity: 0.4; }
+
+/* ── Session file text ────────────────────────────────────────────────── */
+.session-file-text {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  display: inline-block;
+  vertical-align: bottom;
+}
+
+/* ── Phase class helpers ─────────────────────────────────────────────── */
+.phase-merging   #phase-icon { content: '🔗'; }
+.phase-converting #phase-icon { content: '🎧'; }
+.phase-extracting #phase-icon { content: '🔍'; }
+
+/* ── Disabled states ─────────────────────────────────────────────────── */
+.btn-primary:disabled,
+.btn-danger:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+.is-running #url-input { background: var(--bg-void); color: var(--text-mid); }
+
+/* ── Engine badge aria2 vs ytdlp ────────────────────────────────────── */
+.badge.engine-ytdlp {
+  color: var(--cyan);
+  border-color: rgba(0,212,255,0.3);
+  background: var(--cyan-dim);
+}
+.badge.engine-aria2 {
+  color: var(--accent-h);
+  border-color: rgba(61,127,255,0.3);
+  background: var(--accent-dim);
+}
+.badge.engine-auto {
+  color: var(--text-mid);
+  border-color: var(--border);
+  background: transparent;
 }
 
 /* ── Dialog overlay ────────────────────────────────────────────────────── */
@@ -1011,6 +1270,43 @@ html, body {
   box-shadow: none;
 }
 .dialog-btns button.secondary:hover { border-color: var(--text-mid); color: var(--text-hi); box-shadow: none; }
+
+/* ── Loading overlay ───────────────────────────────────────────────────── */
+#loading-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: var(--bg-void);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  transition: opacity 0.5s ease, visibility 0.5s ease;
+}
+#loading-overlay.hidden {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+.loading-spinner {
+  width: 44px;
+  height: 44px;
+  border: 3px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin-loader 0.8s linear infinite;
+}
+@keyframes spin-loader {
+  to { transform: rotate(360deg); }
+}
+.loading-text {
+  font-family: 'Orbitron', monospace;
+  font-size: 11px;
+  letter-spacing: 3px;
+  color: var(--text-lo);
+  text-transform: uppercase;
+}
 </style>
 </head>
 <body>
@@ -1020,7 +1316,38 @@ html, body {
 <div id="bg-grid"></div>
 <div id="bg-scan"></div>
 
-<div id="app">
+<div id="loading-overlay">
+  <div class="loading-spinner"></div>
+  <div class="loading-text">Initializing engines…</div>
+</div>
+
+<div id="app" class="app-shell">
+
+  <header id="custom-titlebar" class="custom-titlebar">
+    <div class="titlebar-inner">
+      <div class="titlebar-left">
+        <div class="titlebar-brand">
+          <div class="titlebar-icon-wrap" aria-hidden="true">
+            <svg viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="18" cy="18" r="16" stroke="#3D7FFF" stroke-width="0.5" stroke-dasharray="3 5" opacity="0.6"/>
+              <circle cx="18" cy="18" r="11" stroke="#00D4FF" stroke-width="0.5" stroke-dasharray="2 3" opacity="0.4"/>
+              <polygon points="18,4 32,28 4,28" fill="none" stroke="#3D7FFF" stroke-width="0.8" opacity="0.3"/>
+            </svg>
+          </div>
+          <span class="titlebar-title">Aria2 Download Manager</span>
+          <span class="titlebar-version">v1.0.1</span>
+        </div>
+        <div class="titlebar-drag-fill" aria-hidden="true"></div>
+      </div>
+      <div class="titlebar-controls">
+        <button type="button" id="titlebar-minimize" class="titlebar-btn" aria-label="Minimize" title="Minimize">—</button>
+        <button type="button" id="titlebar-maximize" class="titlebar-btn" aria-label="Maximize" title="Maximize">□</button>
+        <button type="button" id="titlebar-close" class="titlebar-btn close" aria-label="Close" title="Close">×</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="app-content">
 
   <!-- Header -->
   <div id="header">
@@ -1033,10 +1360,13 @@ html, body {
       <div class="inner-dot"></div>
     </div>
     <div class="title-block">
-      <h1>ARIA2 DOWNLOAD MANAGER</h1>
-      <p id="header-sub">v1.0.1 · aria2 engine · loading…</p>
+      <h1>DOWNLOAD MANAGER</h1>
+      <p id="header-sub">v1.0.1 · multi-engine · loading…</p>
     </div>
-    <span id="aria2-badge" class="ok">● ARIA2 OK</span>
+    <div style="display:flex; flex-direction:column; align-items:flex-end; gap:4px; flex-shrink:0;">
+      <span id="aria2-badge" class="ok" title="Engine status">● ENGINES OK</span>
+      <button class="btn-sm" style="font-size:8px; padding:2px 8px; border-radius:10px; opacity:0.75; cursor:pointer;" onclick="showAboutDialog()">ℹ ABOUT</button>
+    </div>
   </div>
 
   <!-- URL card -->
@@ -1045,25 +1375,57 @@ html, body {
     <div class="url-row">
       <input id="url-input" type="text" placeholder="Paste URL here  (http / https / ftp)…" />
       <button class="btn-primary" id="btn-dl" onclick="onDownload()">⬇ DOWNLOAD</button>
+      <button class="btn-warning" id="btn-pause" disabled onclick="onPauseResume()">Ⅱ PAUSE</button>
       <button class="btn-danger"  id="btn-stop" disabled onclick="onStop()">✕ CANCEL</button>
     </div>
   </div>
 
-  <!-- Strategy card -->
-  <div class="card" id="strategy-card">
-    <span class="strat-hdr">STRATEGY</span>
-    <span class="badge" id="strat-badge">Default</span>
-    <span id="strat-desc">Standard aria2 — no custom headers</span>
-    <span class="attempt-hdr">ATTEMPT</span>
-    <span id="attempt-num">—</span>
+  <!-- Strategy / Engine card -->
+  <div class="card" id="strategy-card" style="display:flex; flex-direction:row; align-items:center; gap:16px;">
+    <div class="engine-card">
+      <div class="engine-row">
+        <span class="strat-hdr">ENGINE</span>
+        <span class="badge engine-auto" id="strat-badge" title="Active download engine">auto</span>
+        <span id="strat-desc">Engine will be selected automatically</span>
+      </div>
+      <div id="yt-dlp-options" class="ytdlp-options">
+        <span class="strat-hdr">QUALITY</span>
+        <div style="display:flex; flex-direction:column; gap:3px; min-width:0;">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <select id="quality-select" title="Select video/audio quality">
+              <option value="best" data-needs-ffmpeg="1">Best quality (Windows MP4)</option>
+              <option value="best_mp4" data-needs-ffmpeg="1">Best MP4 compatible</option>
+              <option value="1080p_mp4" data-needs-ffmpeg="1">1080p MP4 max</option>
+              <option value="720p_mp4" data-needs-ffmpeg="1">720p MP4 max</option>
+              <option value="best_any_mkv" data-needs-ffmpeg="1">Best quality any format (MKV)</option>
+              <option value="mp3" data-needs-ffmpeg="1">Audio only MP3</option>
+              <option value="m4a" data-needs-ffmpeg="1">Audio only M4A</option>
+              <option value="best_single_mp4" data-no-ffmpeg="1">Best single-file MP4</option>
+              <option value="best_single" data-no-ffmpeg="1">Best available single-file</option>
+            </select>
+            <span class="badge ffmpeg-ready" id="ffmpeg-status-badge" style="display:none; padding:2px 6px; font-size:8px;">FFmpeg Ready</span>
+          </div>
+          <span class="quality-helper" id="quality-helper">Prefers MP4 video with M4A/AAC audio so Windows Media Player can play it.</span>
+          <span class="ffmpeg-warning" id="ffmpeg-warning">FFmpeg not found. High-quality video+audio merging is disabled. Only single-file formats are available.</span>
+          <input type="file" id="ffmpeg-file-input" accept=".exe,ffmpeg*" hidden />
+        </div>
+        <label class="playlist-label">
+          <input type="checkbox" id="playlist-check"> PLAYLIST
+        </label>
+      </div>
+    </div>
+    <div style="text-align:center; min-width:60px; flex-shrink:0;">
+      <span class="attempt-hdr">ATTEMPT</span><br/>
+      <span id="attempt-num" style="display:block; margin-top:4px">—</span>
+    </div>
   </div>
 
   <!-- Live session -->
   <div id="session-strip">
     <span id="phase-icon">○</span>
     <span id="phase-label">IDLE</span>
-    <div id="mode-line">Mode: <span class="mode-tag" id="mode-tag">Default</span> · <span id="attempt-inline">—</span></div>
-    <div id="current-file">File: <span class="fn" id="fname-display">—</span></div>
+    <div id="mode-line">Engine: <span class="mode-tag" id="mode-tag">auto</span> · <span id="attempt-inline">Ready</span></div>
+    <div id="current-file">Status: <span class="fn session-file-text" id="fname-display" title="Waiting for URL…">Waiting for URL…</span></div>
   </div>
 
   <!-- Stats card -->
@@ -1089,31 +1451,17 @@ html, body {
     </div>
   </div>
 
-  <!-- Log card -->
-  <div class="card" id="log-card">
-    <div class="log-top">
-      <span class="sec-label" style="margin:0">EVENT LOG</span>
-      <div class="log-top-right">
-        <span style="font-size:10px;color:var(--text-lo)">last <span id="log-count">0</span> entries</span>
-        <button class="btn-sm" id="log-compact-toggle" aria-pressed="false">COMPACT</button>
-        <button class="btn-sm" onclick="clearLog()">CLEAR</button>
-      </div>
-    </div>
-    <div id="log">
-      <div id="log-viewport">
-        <div id="log-spacer"></div>
-        <div id="log-rows"></div>
-      </div>
-      <div id="log-empty">No active events yet.</div>
-    </div>
-  </div>
-
   <!-- Status bar -->
   <div id="statusbar">
     <span id="status-text" class="idle">Ready — paste a URL to begin</span>
-    <span id="dir-label">📁 loading…</span>
+    <div style="display:flex; align-items:center; gap:10px;">
+      <button type="button" class="btn-sm btn-clear" id="btn-clear-ui" title="Clear current UI state">CLEAR</button>
+      <button type="button" class="btn-sm" id="btn-open-folder" disabled title="Open download folder">📂 OPEN FOLDER</button>
+      <span id="dir-label">📁 loading…</span>
+    </div>
   </div>
 
+  </div><!-- .app-content -->
 </div>
 
 <!-- Dialog -->
@@ -1132,30 +1480,341 @@ const { listen  } = window.__TAURI__.event;
 
 /* ── State ─────────────────────────────────────────────────────────────── */
 let isRunning    = false;
+let isPaused     = false;
 let downloadsDir = "";
-const MAX_LOG_LINES = 150;
-const LOG_ROW_HEIGHT = 22;
-const LOG_OVERSCAN = 8;
-let logEntries = [];
-let logEntryMap = new Map();       // id → entry object
-let logUpdateKeyMap = new Map();   // updateKey → entry id
-let rowElementMap = new Map();     // entry id → HTMLElement (stable DOM cache)
-let dirtyRows = new Set();         // entry ids that need a DOM patch this frame
-let logIsCompact = false;
-let logRenderQueued = false;
-let logPinnedToBottom = true;
+let ffmpegAvailable = false;
+let downloadCompleted = false;
+const QUALITIES_REQUIRE_FFMPEG = new Set([
+  "best", "best_mp4", "1080p_mp4", "720p_mp4", "best_any_mkv", "mp3", "m4a"
+]);
+const QUALITIES_NO_FFMPEG = new Set(["best_single_mp4", "best_single"]);
+let currentEngine = "auto";   // "auto" | "aria2" | "yt-dlp"
+let currentPhase  = "idle";   // idle|extracting|downloading|post_processing|complete|failed|paused|canceled
 let lastStrategyName = null;
+let lastProgressDisplay = { speed: "—", eta: "—", downloaded: "—", total: "—", pct: 0 };
+let lastEtaStableMs = 0;  // timestamp of last accepted ETA value
+let currentDownloadId = ""; // server-assigned per-run id
+let lockFinalState = false; // once final state received for currentDownloadId ignore later events
+let lastCompletedFilePath = ""; // verified file path from last successful download
+let youtubeVerificationDialogOpen = false;
 
-// Virtualization state
-let _lastStartIndex = -1;
-let _lastEndIndex   = -1;
-let _visiblePool    = [];          // pool of reusable DOM nodes (not entry-bound)
-
-// Debug counters (only logged when LOG_DEBUG=true)
-const LOG_DEBUG = false;
-const _dbg = { created: 0, patched: 0, reused: 0, renders: 0, skipped: 0 };
 const speedHistory = new Array(40).fill(0);
 let speedRawKbs  = 0;
+
+/* ── URL engine detection ──────────────────────────────────────────────── */
+function detectEngineFromUrl(url) {
+  if (!url) return { engine: "auto", reason: "Waiting for URL…" };
+  const u = url.toLowerCase().split("?")[0];
+  const isFacebookVideo =
+    u.includes("facebook.com/watch") ||
+    u.includes("facebook.com/share/v/") ||
+    u.includes("facebook.com/share/r/") ||
+    u.includes("facebook.com/reel/") ||
+    u.includes("facebook.com/reels/") ||
+    u.includes("facebook.com/videos/") ||
+    u.includes("fb.watch/");
+  if (isFacebookVideo) return { engine: "yt-dlp", reason: "Facebook video detected" };
+  const videoPlatforms = [
+    "youtube.com", "youtu.be", "music.youtube.com",
+    "twitch.tv", "tiktok.com", "instagram.com",
+    "x.com", "twitter.com",
+    "vimeo.com", "dailymotion.com"
+  ];
+  for (const p of videoPlatforms) {
+    if (u.includes(p)) return { engine: "yt-dlp", reason: "Video platform detected" };
+  }
+  if (u.endsWith(".m3u8")) return { engine: "yt-dlp", reason: "HLS playlist detected" };
+  const directExts = [
+    ".zip", ".rar", ".7z", ".exe", ".msi", ".iso", ".pdf", ".apk",
+    ".mp4", ".mkv", ".webm", ".mov", ".avi", ".mp3", ".m4a", ".flac",
+    ".wav", ".tar", ".gz", ".bz2", ".xz", ".dmg", ".deb", ".rpm"
+  ];
+  for (const ext of directExts) {
+    if (u.endsWith(ext)) return { engine: "aria2", reason: "Direct file URL" };
+  }
+  try {
+    const parsed = new URL(url);
+    if (["http:","https:"].includes(parsed.protocol)) {
+       return { engine: "check", reason: "Validation required before download" };
+    }
+    if (parsed.protocol === "ftp:") {
+       return { engine: "aria2", reason: "Direct FTP link" };
+    }
+  } catch(_) {}
+  return { engine: "check", reason: "Validation required before download" };
+}
+
+/* ── Engine preview helper ──────────────────────────────────────────────── */
+function setEnginePreview(engine, reason) {
+  currentEngine = engine;
+  const badge = document.getElementById("strat-badge");
+  const desc  = document.getElementById("strat-desc");
+  let badgeClass = engine;
+  if (engine === "yt-dlp") badgeClass = "ytdlp";
+  else if (engine === "check" || engine === "auto") badgeClass = "auto";
+  else if (engine === "blocked") badgeClass = "err";
+
+  badge.className = `badge engine-${badgeClass}`;
+  badge.textContent = engine;
+  badge.title = reason;
+  desc.textContent = reason;
+  updateVideoOptionsVisibility(engine);
+}
+
+/* ── updateEnginePreview (immediate, non-debounced) ─────────────────────── */
+function updateEnginePreview() {
+  const url = document.getElementById("url-input").value.trim();
+  const { engine, reason } = detectEngineFromUrl(url);
+  setEnginePreview(engine, reason);
+}
+
+/* ── Video options visibility ───────────────────────────────────────────── */
+function updateVideoOptionsVisibility(engine) {
+  const opt = document.getElementById("yt-dlp-options");
+  if (engine === "yt-dlp") {
+    opt.classList.add("visible");
+    opt.classList.remove("dimmed");
+  } else {
+    opt.classList.remove("visible");
+    opt.classList.remove("dimmed");
+  }
+  updateQualityHelper();
+}
+
+async function refreshFfmpegUi() {
+  const warn = document.getElementById("ffmpeg-warning");
+  const qSel = document.getElementById("quality-select");
+  if (!qSel) return;
+
+  let info = { available: false };
+  try {
+    info = await invoke("get_ffmpeg_info");
+  } catch (_) {}
+
+  ffmpegAvailable = Boolean(info.available);
+
+  const statusBadge = document.getElementById("ffmpeg-status-badge");
+  if (statusBadge) {
+    statusBadge.style.display = ffmpegAvailable ? "inline-block" : "none";
+  }
+
+  if (warn) {
+    warn.classList.add("visible");
+    if (ffmpegAvailable) {
+      if (info.source === "bundled") {
+        warn.textContent = "Bundled FFmpeg detected — full quality mode enabled";
+      } else {
+        warn.textContent = "System FFmpeg detected — full quality mode enabled";
+      }
+      warn.style.color = "var(--success)";
+    } else {
+      warn.textContent = "FFmpeg not found. YouTube downloads are blocked unless FFmpeg is available.";
+      warn.style.color = "var(--danger)";
+    }
+  }
+
+  for (const opt of qSel.options) {
+    const needsFf = opt.dataset.needsFfmpeg === "1";
+    const noFf = opt.dataset.noFfmpeg === "1";
+    if (ffmpegAvailable) {
+      opt.hidden = noFf;
+      opt.disabled = false;
+    } else {
+      opt.hidden = needsFf;
+      opt.disabled = needsFf;
+    }
+  }
+
+  if (!ffmpegAvailable && QUALITIES_REQUIRE_FFMPEG.has(qSel.value)) {
+    qSel.value = "best_single_mp4";
+  } else if (ffmpegAvailable && QUALITIES_NO_FFMPEG.has(qSel.value)) {
+    qSel.value = "best";
+  }
+
+  updateQualityHelper();
+}
+
+function updateQualityHelper() {
+  const helper = document.getElementById("quality-helper");
+  if (!helper) return;
+  const q = document.getElementById("quality-select").value;
+  if (!ffmpegAvailable) {
+    if (q === "best_single") {
+      helper.textContent = "Best available single-file format (any container).";
+    } else {
+      helper.textContent = "Best single-file MP4 (no separate video+audio merge).";
+    }
+    return;
+  }
+  if (q === "best") {
+    helper.textContent = "Prefers H.264 MP4 video and M4A/AAC audio without slow re-encoding.";
+  } else if (q.includes("mkv")) {
+    helper.textContent = "Highest quality; MKV is used for better codec compatibility.";
+  } else if (q.includes("mp3") || q.includes("m4a")) {
+    helper.textContent = "Audio extraction/conversion via FFmpeg.";
+  } else if (q === "best_mp4") {
+    helper.textContent = "Prefers MP4 video and M4A/AAC audio streams without slow re-encoding.";
+  } else {
+    helper.textContent = "Resolution-limited MP4/M4A merge without slow re-encoding.";
+  }
+}
+
+function setRunningState(running) {
+  isRunning = Boolean(running);
+  if (isRunning) {
+    isPaused = false;
+    currentPhase = "running";
+  } else if (!isPaused && (currentPhase === "running" || currentPhase === "starting")) {
+    currentPhase = "idle";
+  }
+  syncButtons();
+}
+
+function setPausedState(paused) {
+  isPaused = Boolean(paused);
+  if (isPaused) {
+    isRunning = false;
+    currentPhase = "paused";
+  } else if (currentPhase === "paused") {
+    currentPhase = "idle";
+  }
+  syncButtons();
+}
+
+function setIdleState() {
+  isRunning = false;
+  isPaused = false;
+  if (currentPhase !== "complete") {
+    currentPhase = "idle";
+    downloadCompleted = false;
+  }
+  const urlEl = document.getElementById("url-input");
+  urlEl.disabled = false;
+  if (currentPhase !== "complete") {
+    setPhaseUi("waiting", "IDLE", currentEngine || "auto");
+    setStripState("");
+    setStatus("Ready — paste a URL to begin", "idle");
+  }
+  syncButtons();
+}
+
+function syncButtons() {
+  const urlEl    = document.getElementById("url-input");
+  const dlBtn    = document.getElementById("btn-dl");
+  const pBtn     = document.getElementById("btn-pause");
+  const stopBtn  = document.getElementById("btn-stop");
+  const clearBtn = document.getElementById("btn-clear-ui");
+  const qSel     = document.getElementById("quality-select");
+  const plCheck  = document.getElementById("playlist-check");
+
+  const url = urlEl.value.trim();
+  const hasValidUrl = isValidUrl(url);
+  const folderReady = Boolean(downloadsDir && downloadsDir !== "loading…" && !downloadsDir.includes("Error"));
+
+  // Defensive repair
+  if (!isRunning && (currentPhase === "idle" || currentPhase === "complete" || currentPhase === "failed" || currentPhase === "canceled")) {
+    isPaused = false;
+  }
+
+  const isStarting = currentPhase === "starting";
+  dlBtn.disabled   = isRunning || isPaused || isStarting || !hasValidUrl || !folderReady;
+  stopBtn.disabled = !isRunning && !isPaused;
+  pBtn.disabled    = !isRunning && !isPaused;
+  if (clearBtn) clearBtn.disabled = isRunning || isPaused || isStarting;
+
+  const openBtn = document.getElementById("btn-open-folder");
+  if (openBtn) {
+    openBtn.disabled = !folderReady;
+  }
+
+  pBtn.textContent = isPaused ? "▶ RESUME" : "Ⅱ PAUSE";
+  pBtn.classList.toggle("resume-mode", isPaused);
+
+  urlEl.disabled   = isRunning || isPaused || isStarting;
+  if (qSel)    qSel.disabled    = isRunning || isPaused || isStarting;
+  if (plCheck) plCheck.disabled = isRunning || isPaused || isStarting;
+
+  const appEl = document.getElementById("app");
+  if (isRunning || isPaused || isStarting) appEl.classList.add("is-running");
+  else appEl.classList.remove("is-running");
+}
+
+function isValidUrl(s) {
+  try {
+    const u = new URL(s);
+    return ["http:", "https:", "ftp:"].includes(u.protocol);
+  } catch(_) { return false; }
+}
+
+async function onPauseResume() {
+  if (!isRunning && !isPaused) return;
+
+  if (isRunning && !isPaused) {
+    try {
+      await invoke("pause_download");
+      // Immediately set paused state so the UI shows RESUME button.
+      // The backend will also send a 'download-paused' event as confirmation.
+      setPausedState(true);
+      setPhaseUi("warn", "PAUSED", lastStrategyName || currentEngine || "auto");
+      setStripState("fail");
+    } catch (err) {
+      setStatus("Pause failed", "err");
+    }
+    return;
+  }
+
+  if (isPaused) {
+    try {
+      setPausedState(false);
+      isRunning = true;
+      currentPhase = "starting";
+      syncButtons();
+      setPhaseUi("download", "RESUMING", lastStrategyName || currentEngine || "auto");
+      setStripState("active");
+      await invoke("resume_download");
+    } catch (err) {
+      isRunning = false;
+      setPausedState(true);
+      setStatus("Resume failed", "err");
+    }
+    return;
+  }
+}
+
+function onDownloadPaused() {
+  // Called when backend confirms the download is paused.
+  // Ensure the UI is in the correct paused state.
+  setPausedState(true);
+  setPhaseUi("warn", "PAUSED", lastStrategyName || currentEngine || "auto");
+  setStripState("fail");
+  const bar = document.getElementById("progress-bar");
+  const wrap = document.getElementById("progress-bar-wrap");
+  bar.classList.remove("indeterminate");
+  wrap.classList.remove("glowing");
+  updateStat("s-speed", "—");
+  updateStat("s-eta",   "—");
+}
+
+/* ── formatDisplayFilename ──────────────────────────────────────────────── */
+function formatDisplayFilename(pathOrName) {
+  if (!pathOrName || pathOrName === "—") return "—";
+  // Extract just the filename from a full path
+  const parts = pathOrName.replace(/\\/g, "/").split("/");
+  const name = parts[parts.length - 1];
+  return name || pathOrName;
+}
+
+/* ── updateSessionFile ──────────────────────────────────────────────────── */
+function updateSessionFile(label, value, fullPath) {
+  const container = document.getElementById("current-file");
+  const fn = document.getElementById("fname-display");
+  const display = formatDisplayFilename(value);
+  fn.textContent = display;
+  fn.title = fullPath || value || "";
+  container.childNodes[0].textContent = `${label}: `;
+}
+
+/* ── setEngineBadge (header badge) ─────────────────────────────────────── */
 
 /* ══════════════════════════════════════════════════════════════════════
    BACKGROUND — animated particle field
@@ -1260,93 +1919,245 @@ function updateSparkline() {
 /* ══════════════════════════════════════════════════════════════════════
    STARTUP
 ═══════════════════════════════════════════════════════════════════════ */
+async function resolveDownloadsDir() {
+  try {
+    const p = window.__TAURI__?.path;
+    if (p?.downloadDir) {
+      const dir = await p.downloadDir();
+      if (dir) return dir;
+    }
+    if (p?.homeDir && p?.join) {
+      const dir = await p.join(await p.homeDir(), "Downloads");
+      if (dir) return dir;
+    }
+  } catch (e) {
+    console.warn("Tauri path API failed", e);
+  }
+  return await invoke("get_default_download_dir");
+}
+
 async function init() {
   updateSparkline();
+  await refreshFfmpegUi();
 
+  // 1. Resolve downloads dir (fast, usually cached)
   try {
-    const p = window.__TAURI__.path;
-    if (typeof p.resolveDirectory === "function") {
-      downloadsDir = await p.resolveDirectory(7, null);
-    } else if (typeof p.downloadDir === "function") {
-      downloadsDir = await p.downloadDir();
-    } else if (typeof p.homeDir === "function" && typeof p.join === "function") {
-      downloadsDir = await p.join(await p.homeDir(), "Downloads");
-    }
-    document.getElementById("header-sub").textContent =
-      `v1.0.1 · aria2 engine · ${downloadsDir}`;
-    document.getElementById("dir-label").textContent = `📁 ${downloadsDir}`;
-  } catch (_) {}
-
-  try {
-    const ok = await invoke("check_aria2");
-    const badge = document.getElementById("aria2-badge");
-    if (ok) {
-      badge.textContent = "● ARIA2 OK";
-      badge.className   = "ok";
+    downloadsDir = await resolveDownloadsDir();
+    if (downloadsDir) {
+      document.getElementById("header-sub").textContent = `v1.0.1 · multi-engine · ${downloadsDir}`;
+      document.getElementById("dir-label").textContent = `📁 ${downloadsDir}`;
     } else {
-      badge.textContent = "● MISSING";
-      badge.className   = "err";
-      onEventLog({
-        timestamp: ts(),
-        type: "DOWNLOAD_FAILED",
-        category: "error",
-        title: "aria2c not found",
-        details: "Install it with: sudo apt install aria2",
-      });
-      setStatus("aria2 not found", "err");
+      document.getElementById("dir-label").textContent = `⚠ Directory Error`;
+      setStatus("Download folder unavailable", "err");
     }
-  } catch (_) {}
+  } catch (err) {
+    downloadsDir = "";
+    document.getElementById("dir-label").textContent = "⚠ Directory Error";
+    setStatus("Download folder unavailable", "err");
+  }
+  syncButtons();
 
-  await listen("transfer-update",  e => onTransferUpdate(e.payload));
-  await listen("event-log",        e => onEventLog(e.payload));
-  await listen("status-msg",       e => setStatus(e.payload.text, e.payload.kind));
+  // 2. Register event listeners BEFORE engine checks
+  //    so the UI is responsive immediately.
+  await listen("transfer-update",  e => {
+    onTransferUpdate(e.payload);
+  });
+  await listen("status-msg",       e => {
+    if (lockFinalState) return;
+    const payload = e.payload || {};
+    if (payload.downloadId && currentDownloadId && payload.downloadId !== currentDownloadId) return;
+    if (payload.kind === "dl" && /Downloading.*0%/.test(payload.text || "") && lastProgressDisplay.pct > 0) {
+      payload.text = `Downloading… ${formatPctValue(lastProgressDisplay.pct)}`;
+    }
+    setStatus(payload.text, payload.kind);
+  });
   await listen("strategy-changed", e => onStrategyChanged(e.payload));
   await listen("finished",         e => onFinished(e.payload));
+  await listen("youtube-cookie-required", e => showYoutubeVerificationModal(e.payload || {}));
+  await listen("download-paused",  () => onDownloadPaused());
+
+  setIdleState();
+  updateEnginePreview();
+
+  // 3. Dismiss loading overlay now that the UI is interactive
+  document.getElementById("loading-overlay").classList.add("hidden");
+
+  // 4. Engine checks run in the background — no freeze
+  checkEnginesAsync();
+}
+
+async function checkEnginesAsync() {
+  try {
+    const [aria2Ok, ytdlpOk] = await Promise.all([
+      invoke("check_aria2"),
+      invoke("check_ytdlp"),
+    ]);
+    const badge = document.getElementById("aria2-badge");
+
+    if (aria2Ok && ytdlpOk) {
+      badge.textContent = "● ENGINES OK";
+      badge.className   = "ok";
+    } else if (aria2Ok) {
+      badge.textContent = "● ARIA2 OK";
+      badge.className   = "ok";
+    } else if (ytdlpOk) {
+      badge.textContent = "● YT-DLP OK";
+      badge.className   = "ok";
+    } else {
+      badge.textContent = "● ENGINE ERROR";
+      badge.className   = "err";
+      setStatus("No download engine found", "err");
+    }
+
+    if (!ytdlpOk) {
+      setStatus("YT-DLP not found — video downloads unavailable", "warn");
+    }
+  } catch (_) {}
 }
 
 /* ══════════════════════════════════════════════════════════════════════
    DOWNLOAD / CANCEL
 ═══════════════════════════════════════════════════════════════════════ */
-async function onDownload() {
-  if (isRunning) return;
+async function onDownload(browserCookieSource = null) {
   const url = document.getElementById("url-input").value.trim();
-  if (!url) { showDialog("No URL", "Paste a download URL first.", [{ label:"OK" }]); return; }
+  syncButtons();
+
   if (!isValidUrl(url)) {
-    showDialog("Invalid URL", "Please enter a full URL starting with:\n  http://   https://   ftp://", [{ label:"OK" }]);
+    showDialog("Invalid URL", "Please enter a valid http, https, or ftp URL.", [
+      { label: "OK", primary: true }
+    ]);
     return;
   }
-  resetUI();
-  isRunning = true;
-  document.getElementById("btn-dl").disabled    = true;
-  document.getElementById("btn-stop").disabled  = false;
-  document.getElementById("url-input").disabled = true;
-  try {
-    await invoke("start_download", { url, dir: downloadsDir });
-  } catch (err) {
-    onEventLog({
-      timestamp: ts(),
-      type: "DOWNLOAD_FAILED",
-      category: "error",
-      title: "Download start failed",
-      details: String(err),
-    });
-    setStatus("Failed to start", "err");
-    unlockUI();
+
+  if (!downloadsDir) {
+    showDialog("Download folder missing", "The download folder is not ready.", [
+      { label: "OK", primary: true }
+    ]);
+    return;
   }
+
+  resetUI();
+  lockFinalState = false;
+  youtubeVerificationDialogOpen = false;
+  downloadCompleted = false;
+  lastCompletedFilePath = "";
+  currentPhase = "starting";
+  isRunning = false;
+  isPaused = false;
+
+  const quality = document.getElementById("quality-select")?.value || "best";
+  const playlist = Boolean(document.getElementById("playlist-check")?.checked);
+  const downloadId = (typeof crypto !== "undefined" && crypto.randomUUID)
+    ? crypto.randomUUID()
+    : `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+  const customFilename = null;
+
+  currentDownloadId = downloadId;
+  setPhaseUi("download", "STARTING", "auto");
+  setStripState("active");
+  setStatus("Starting download...", "dl");
+  syncButtons();
+
+  try {
+    await invoke("start_download", {
+      url,
+      dir: downloadsDir,
+      quality,
+      playlist,
+      customFilename,
+      browserCookieSource,
+      downloadId,
+    });
+
+    isRunning = true;
+    currentPhase = "downloading";
+    setStatus("Downloading...", "dl");
+    syncButtons();
+  } catch (err) {
+    console.error("[download] start_download failed", err);
+    showDownloadStartError("Start download failed", err);
+  }
+}
+function formatError(err) {
+  if (!err) return "Unknown error";
+  if (typeof err === "string") return err;
+  if (err.message) return err.message;
+  try { return JSON.stringify(err, null, 2); }
+  catch (_) { return String(err); }
+}
+
+function showDownloadStartError(title, err) {
+  const details = formatError(err);
+
+  currentDownloadId = "";
+  isRunning = false;
+  isPaused = false;
+  currentPhase = "failed";
+  lockFinalState = true;
+
+  const bar  = document.getElementById("progress-bar");
+  const wrap = document.getElementById("progress-bar-wrap");
+  if (bar)  bar.classList.remove("indeterminate");
+  if (wrap) wrap.classList.remove("glowing");
+
+  setPhaseUi("error", "FAILED", currentEngine || "auto");
+  setStripState("fail");
+  setStatus(`${title}: ${details}`, "err");
+  updateSessionFile("Status", title, "");
+
+  const banner = document.getElementById("completion-banner");
+  banner.classList.remove("ok", "err", "warn");
+  banner.classList.add("show", "err");
+  document.getElementById("completion-icon").textContent = "✕";
+  document.getElementById("completion-text").textContent = details;
+
+  showDialog(title, details, [{ label: "OK", primary: true }]);
+
+  document.getElementById("url-input").disabled = false;
+  unlockUI();
+  syncButtons();
+
+  console.error(title, err);
+}
+
+function promptDuplicateChoice(existsPath, filename) {
+  return new Promise((resolve) => {
+    const displayName = filename || existsPath || "<unknown file>";
+    showDialog(
+      "File already exists",
+      `This file already exists:\n${displayName}\n\nChoose what to do.`,
+      [
+        { label: "📂 Open Folder", action: async () => {
+            const folder = getFolderFromPath(existsPath || downloadsDir);
+            if (folder) invoke("open_download_folder", { path: folder }).catch(() => {});
+            // Don't resolve — keep modal open so user can still choose
+            // Re-open the dialog after opening folder
+            promptDuplicateChoice(existsPath, filename).then(resolve);
+          }
+        },
+        { label: "Rename & Download", primary: true, action: async () => resolve("rename") },
+        { label: "Overwrite", action: async () => resolve("overwrite") },
+        { label: "Cancel", action: async () => resolve("cancel") },
+      ]
+    );
+  });
 }
 
 async function onStop() {
-  if (!isRunning) return;
-  showDialog("Cancel Download", "Cancel the active download?", [
-    { label: "Yes", primary: true, action: async () => {
-        onEventLog({
-          timestamp: ts(),
-          type: "DOWNLOAD_PAUSED",
-          category: "warn",
-          title: "Cancel requested",
-          details: "Stopping aria2…",
-        });
-        await invoke("stop_download");
+  if (!isRunning && !isPaused) return;
+
+  const confirmMsg = isPaused ? "Cancel the paused download?" : "Cancel the active download?";
+  showDialog("Cancel Download", confirmMsg, [
+    { label: "Yes, Cancel", primary: true, action: async () => {
+        if (isPaused) isPaused = false;
+        const stopBtn = document.getElementById("btn-stop");
+        if (stopBtn) { stopBtn.textContent = "Cancelling…"; stopBtn.disabled = true; }
+        setStatus("Cancelling download…", "err");
+        try {
+          await invoke("stop_download");
+        } catch (_) {
+          // Backend will still emit finished:cancelled
+        }
       }
     },
     { label: "No" }
@@ -1356,47 +2167,108 @@ async function onStop() {
 /* ══════════════════════════════════════════════════════════════════════
    EVENT HANDLERS
 ═══════════════════════════════════════════════════════════════════════ */
-function onStrategyChanged({ attempt, name, description }) {
+function onStrategyChanged({ attempt, name, description, engine }) {
   lastStrategyName = name;
   animateStat("attempt-num", attempt);
-  document.getElementById("strat-desc").textContent       = description;
-  document.getElementById("attempt-inline").textContent   = `Attempt ${attempt}`;
-  document.getElementById("mode-tag").textContent         = name;
+  document.getElementById("attempt-inline").textContent = `Attempt ${attempt}`;
+  document.getElementById("mode-tag").textContent = name;
 
-  const badge = document.getElementById("strat-badge");
-  if (attempt === 1) {
-    badge.textContent = name;
-    badge.className   = "badge";
+  // Update engine preview if backend tells us
+  if (engine) {
+    currentEngine = engine;
+    const badge = document.getElementById("strat-badge");
+    badge.className = `badge engine-${engine === "yt-dlp" ? "ytdlp" : engine === "aria2" ? "aria2" : "auto"}`;
+    badge.textContent = engine;
+    const desc = document.getElementById("strat-desc");
+    if (engine === "yt-dlp") {
+      desc.textContent = description || "Video/audio platform download";
+    } else if (engine === "aria2") {
+      desc.textContent = description || "Direct file download";
+    } else {
+      desc.textContent = description || "Engine will be selected automatically";
+    }
+    updateVideoOptionsVisibility(engine);
   } else {
-    badge.textContent = `↺ ${name}`;
-    badge.className   = "badge retry-mode";
+    document.getElementById("strat-desc").textContent = description || name;
+    const badge = document.getElementById("strat-badge");
+    if (attempt === 1) {
+      badge.textContent = name;
+      badge.className   = "badge engine-auto";
+    } else {
+      badge.textContent = `↺ ${name}`;
+      badge.className   = "badge retry-mode";
+    }
   }
 }
 
 function onTransferUpdate(p) {
-  const pct   = Math.min(100, Math.max(0, Number(p.pct) | 0));
-  const phase = p.phase || "downloading";
-  const strat = p.strategyName || lastStrategyName || "Default";
-
-  if (p.strategyName) {
-    document.getElementById("mode-tag").textContent = p.strategyName;
-    lastStrategyName = p.strategyName;
+  if (!p) {
+    return;
   }
+  // Ignore events from old or unrelated downloads
+  if (currentDownloadId) {
+    if (!p.downloadId || p.downloadId !== currentDownloadId) {
+      return;
+    }
+    if (lockFinalState) {
+      return;
+    }
+  }
+
+  const rawPct = Math.min(100, Math.max(0, Number(p.pct) || 0));
+  const pct   = effectiveProgressPct(p, rawPct);
+  const phase = (p.phase || "downloading").toLowerCase();
+  const strat = p.engine || p.strategyName || lastStrategyName || "Default";
+
+  // Update engine tracking
+  if (p.engine) currentEngine = p.engine;
+  if (p.strategyName) lastStrategyName = p.strategyName;
+
+  if (p.strategyName) document.getElementById("mode-tag").textContent = p.strategyName;
+  else if (p.engine) document.getElementById("mode-tag").textContent = p.engine;
+
   if (p.strategyAttempt) {
     animateStat("attempt-num", p.strategyAttempt);
     document.getElementById("attempt-inline").textContent = `Attempt ${p.strategyAttempt}`;
   }
 
-  const fname = p.filename && p.filename !== "—" ? p.filename : guessFilenameFromUrl();
-  document.getElementById("fname-display").textContent = fname;
+  // Filename display
+  let fnLabel = "File";
+  let fnValue = "—";
+  let fnFull  = "";
+  if (p.title) {
+    fnLabel = "Video"; fnValue = p.title; fnFull = p.fullPath || p.filename || "";
+  } else if (p.filename && p.filename !== "—") {
+    fnLabel = "File"; fnValue = p.filename; fnFull = p.fullPath || p.filename;
+  } else if (p.fullPath) {
+    fnLabel = "File"; fnValue = formatDisplayFilename(p.fullPath); fnFull = p.fullPath;
+  } else if (phase === "extracting") {
+    fnLabel = "Status"; fnValue = "Resolving filename…"; fnFull = "";
+  } else {
+    fnValue = guessFilenameFromUrl(); fnFull = "";
+  }
+  updateSessionFile(fnLabel, fnValue, fnFull);
 
+  const missingMark = "\u2014";
   const totalKnown = Boolean(p.totalKnown);
-  const totalDisp  = p.total && p.total !== "—"
-    ? (totalKnown ? p.total : `${p.total} (est.)`) : "—";
-  updateStat("s-total", totalDisp);
+  const totalMissing = !p.total || p.total === missingMark || p.total === "-" || p.total === "?";
+  const totalDisp  = !totalMissing
+    ? (totalKnown ? p.total : `${p.total} (est.)`) : missingMark;
 
   const bar  = document.getElementById("progress-bar");
   const wrap = document.getElementById("progress-bar-wrap");
+
+  // Engine mode line
+  const modeTag = document.getElementById("mode-tag");
+  if (currentEngine === "yt-dlp") {
+    const qSel = document.getElementById("quality-select");
+    const qLabel = qSel ? qSel.options[qSel.selectedIndex]?.text || "default" : "default";
+    modeTag.textContent = `yt-dlp · ${qLabel}`;
+    document.getElementById("attempt-inline").textContent = phase.toUpperCase();
+    setEngineBadge("yt-dlp", "ACTIVE");
+  } else if (currentEngine === "aria2") {
+    modeTag.textContent = "aria2 · Direct";
+  }
 
   if (phase === "connecting") {
     bar.classList.add("indeterminate");
@@ -1411,45 +2283,201 @@ function onTransferUpdate(p) {
     document.getElementById("pct-label").textContent = "…";
     return;
   }
+
+  if (phase === "extracting") {
+    bar.classList.add("indeterminate");
+    bar.classList.remove("has-progress");
+    wrap.classList.add("glowing");
+    setPhaseUi("waiting", "EXTRACTING", strat);
+    setStripState("active");
+    updateStat("s-speed", "—");
+    updateStat("s-eta",   lastProgressDisplay.eta);
+    updateStat("s-dl",    lastProgressDisplay.downloaded);
+    updateStat("s-pct",   "…");
+    document.getElementById("pct-label").textContent = "…";
+    return;
+  }
+
+  if (phase === "post_processing" || phase === "merging" || phase === "converting") {
+    bar.classList.remove("indeterminate");
+    wrap.classList.add("glowing");
+    setPhaseUi("waiting", "POST_PROCESSING", strat);
+    setStripState("active");
+    const keptPct = Math.max(pct, 100);
+    setProgress(keptPct);
+    updateStat("s-speed", "—");
+    updateStat("s-eta",   "—");
+    updateStat("s-dl",    p.downloaded || lastProgressDisplay.downloaded);
+    updateStat("s-total", p.total || lastProgressDisplay.total);
+    updateStat("s-pct",   keptPct + "%");
+    updateSessionFile("Status", "Merging or converting…", "");
+    currentPhase = "post_processing";
+    isRunning = true;
+    syncButtons();
+    return;
+  }
+
   bar.classList.remove("indeterminate");
 
   if (phase === "downloading") {
+    currentPhase = "downloading";
     setPhaseUi("download", "DOWNLOADING", strat);
     setStripState("active");
-    setProgress(pct);
+    const isYtdlpTransfer = currentEngine === "yt-dlp" || p.engine === "yt-dlp";
+    const newTotalBytes = parseDisplayBytes(p.total);
+    const oldTotalBytes = parseDisplayBytes(lastProgressDisplay.total);
+    const totalIncreased = Boolean(oldTotalBytes && newTotalBytes > oldTotalBytes);
+    const displayPct = isYtdlpTransfer ? pct : Math.max(lastProgressDisplay.pct || 0, pct);
+    const indeterminateDownload = !totalKnown && totalMissing && pct <= 0;
+    if (indeterminateDownload) {
+      bar.classList.add("indeterminate");
+      bar.classList.remove("has-progress");
+      updateStat("s-pct", "...");
+      document.getElementById("pct-label").textContent = "...";
+    } else {
+      bar.classList.remove("indeterminate");
+      setProgress(displayPct);
+    }
     wrap.classList.add("glowing");
-    updateStat("s-speed", p.speed || "—");
-    updateStat("s-eta",   p.eta   || "—");
-    updateStat("s-dl",    p.downloaded || "—");
-    updateStat("s-pct",   pct + "%");
+
+    // Robust updates: only overwrite if new value is real
+    if (p.speed && p.speed !== "—" && p.speed !== "Unknown" && p.speed !== "Unknown speed") {
+      lastProgressDisplay.speed = p.speed;
+    }
+    if (p.eta && p.eta !== "—" && p.eta !== "0" && p.eta !== "00:00" && p.eta !== "Unknown") {
+      // ETA smoothing: avoid jitter from yt-dlp's separate video/audio streams.
+      const newSecs = parseEtaSeconds(p.eta);
+      const oldSecs = parseEtaSeconds(lastProgressDisplay.eta);
+      const now = Date.now();
+      const elapsed = (now - (lastEtaStableMs || 0)) / 1000;
+      const progressDropped = isYtdlpTransfer
+        && lastProgressDisplay.pct
+        && displayPct + 5 < lastProgressDisplay.pct;
+
+      if (newSecs > 0) {
+        const shouldAccept = !oldSecs               // first ETA
+          || progressDropped
+          || totalIncreased
+          || newSecs <= Math.max(1, oldSecs - elapsed + 2)
+          || (elapsed > 12 && newSecs <= oldSecs * 1.15);
+        if (shouldAccept) {
+          lastProgressDisplay.eta = p.eta;
+          lastEtaStableMs = now;
+        }
+      }
+    }
+    if (p.downloaded && p.downloaded !== "—") {
+      const newDownloadedBytes = parseDisplayBytes(p.downloaded);
+      const oldDownloadedBytes = parseDisplayBytes(lastProgressDisplay.downloaded);
+      if (!oldDownloadedBytes || newDownloadedBytes >= oldDownloadedBytes) {
+        lastProgressDisplay.downloaded = p.downloaded;
+      }
+    }
+    if (!totalMissing) {
+      if (!isYtdlpTransfer || !oldTotalBytes || newTotalBytes >= oldTotalBytes) {
+        lastProgressDisplay.total = p.total;
+      }
+    }
+    if (!indeterminateDownload) {
+      lastProgressDisplay.pct = displayPct;
+    }
+
+    updateStat("s-speed", lastProgressDisplay.speed);
+    updateStat("s-eta",   lastProgressDisplay.eta);
+    updateStat("s-dl",    lastProgressDisplay.downloaded);
+    updateStat("s-total", lastProgressDisplay.total);
+    if (indeterminateDownload) {
+      updateStat("s-pct", "...");
+      setStatus(`Downloading... ${lastProgressDisplay.downloaded} received`, "dl");
+    } else {
+      updateStat("s-pct",   formatPctValue(lastProgressDisplay.pct));
+      setStatus(`Downloading… ${formatPctValue(lastProgressDisplay.pct)}`, "dl");
+    }
+
+    if (currentEngine === "yt-dlp") setEngineBadge("yt-dlp", "ACTIVE");
+    else setEngineBadge(strat, "ACTIVE");
 
     // Feed sparkline
-    const rawKbs = parseKbs(p.speed);
+    const rawKbs = parseKbs(lastProgressDisplay.speed);
     speedHistory.push(rawKbs);
     speedHistory.shift();
     updateSparkline();
     return;
   }
 
-  if (phase === "complete") {
+  if (phase === "complete" || phase === "completed") {
     bar.classList.remove("indeterminate");
-    setPhaseUi("complete", "COMPLETE", strat);
-    setStripState("done");
+    wrap.classList.add("glowing");
+    setPhaseUi("waiting", "FINALIZING", strat);
+    setStripState("active");
     setProgress(100);
-    wrap.classList.remove("glowing");
-    updateStat("s-speed", p.speed || "—");
-    updateStat("s-eta",   p.eta   || "—");
-    updateStat("s-dl",    p.downloaded || "—");
-    updateStat("s-pct",   "100%");
+    updateStat("s-pct", "100%");
+    updateSessionFile("Status", "Waiting for final confirmation…", "");
+    setStatus("Finalizing download…", "dl");
+    currentPhase = "post_processing";
+    isRunning = true;
+    syncButtons();
     return;
   }
 
-  if (phase === "cancelled" || phase === "error") {
+  if (phase === "paused") {
+    setPausedState(true);
+    setPhaseUi("warn", "PAUSED", strat);
+    setStripState("fail");
     bar.classList.remove("indeterminate");
     wrap.classList.remove("glowing");
-    setPhaseUi(phase === "cancelled" ? "warn" : "error",
-               phase === "cancelled" ? "CANCELLED" : "ERROR", strat);
+    updateStat("s-speed", "—");
+    updateStat("s-eta",   "—");
+    return;
+  }
+
+  if (phase === "downloading" || phase === "connecting" || phase === "merging" || phase === "converting" || phase === "extracting") {
+    isRunning = true;
+    isPaused = false;
+    currentPhase = phase;
+    setPausedState(false);
+  }
+
+  if (phase === "cancelled" || phase === "canceled") {
+    setIdleState();
+    currentPhase = "canceled";
+    setPhaseUi("warn", "CANCELED", strat);
     setStripState("fail");
+    return;
+  }
+
+  if (phase === "error" || phase === "failed") {
+    isRunning = false;
+    isPaused = false;
+    currentPhase = "failed";
+    bar.classList.remove("indeterminate");
+    wrap.classList.remove("glowing");
+    setPhaseUi("error", "FAILED", strat);
+    setStripState("fail");
+    setEngineBadge(currentEngine || strat, "ERROR");
+    syncButtons();
+    return;
+  }
+
+  if (phase === "stalled") {
+    bar.classList.remove("indeterminate");
+    bar.classList.add("has-progress");
+    wrap.classList.add("glowing");
+    setPhaseUi("warn", "STALLED", strat);
+    setStripState("active");
+    setProgress(Math.max(lastProgressDisplay.pct || 0, pct));
+    // Wipe speed and ETA — bytes are frozen, these values are meaningless.
+    lastProgressDisplay.speed = "—";
+    updateStat("s-speed", "—");
+    updateStat("s-eta",   "—");
+    // Keep downloaded / total visible so the user can see where it stopped.
+    if (p.downloaded && p.downloaded !== "-") {
+      updateStat("s-dl", p.downloaded);
+    }
+    if (!totalMissing) updateStat("s-total", totalDisp);
+    isRunning = true;
+    isPaused = false;
+    syncButtons();
     return;
   }
 
@@ -1474,6 +2502,56 @@ function parseKbs(speedStr) {
   return v;
 }
 
+function parseDisplayBytes(value) {
+  if (!value || value === "â€”" || value === "-") return 0;
+  const m = String(value).match(/([\d.]+)\s*(b|kib|kb|mib|mb|gib|gb|tib|tb)/i);
+  if (!m) return 0;
+  const n = parseFloat(m[1]);
+  const unit = m[2].toLowerCase();
+  const map = {
+    b: 1,
+    kb: 1000, kib: 1024,
+    mb: 1000 * 1000, mib: 1024 * 1024,
+    gb: 1000 * 1000 * 1000, gib: 1024 * 1024 * 1024,
+    tb: 1000 * 1000 * 1000 * 1000, tib: 1024 * 1024 * 1024 * 1024
+  };
+  return n * (map[unit] || 1);
+}
+
+function effectiveProgressPct(payload, fallbackPct = 0) {
+  const downloadedBytes = parseDisplayBytes(payload?.downloaded);
+  const totalBytes = parseDisplayBytes(payload?.total);
+  if (downloadedBytes > 0 && totalBytes > 0) {
+    return Math.min(100, Math.max(0, (downloadedBytes / totalBytes) * 100));
+  }
+  return Math.min(100, Math.max(0, Number(fallbackPct) || 0));
+}
+
+function formatPctValue(value) {
+  const n = Math.min(100, Math.max(0, Number(value) || 0));
+  if (n === 0 || n === 100) return Math.round(n) + "%";
+  if (n < 1) return n.toFixed(2) + "%";
+  if (n < 10) return n.toFixed(1) + "%";
+  return Math.round(n) + "%";
+}
+
+function parseEtaSeconds(etaStr) {
+  if (!etaStr || etaStr === "—" || etaStr === "Unknown") return 0;
+  // Handles "H:MM:SS", "MM:SS", "SS", and "4m34s" style
+  const parts = String(etaStr).split(":").map(Number);
+  if (parts.every(n => !isNaN(n))) {
+    if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2];
+    if (parts.length === 2) return parts[0] * 60 + parts[1];
+    if (parts.length === 1) return parts[0];
+  }
+  // Try "4m34s" style
+  const m2 = etaStr.match(/(\d+)m\s*(\d+)s/i);
+  if (m2) return parseInt(m2[1]) * 60 + parseInt(m2[2]);
+  const m3 = etaStr.match(/(\d+)s/i);
+  if (m3) return parseInt(m3[1]);
+  return 0;
+}
+
 function guessFilenameFromUrl() {
   try {
     const u = document.getElementById("url-input").value.trim();
@@ -1483,52 +2561,299 @@ function guessFilenameFromUrl() {
   } catch (_) { return "—"; }
 }
 
-function setPhaseUi(kind, label, strategyName) {
-  const iconEl = document.getElementById("phase-icon");
-  const labEl  = document.getElementById("phase-label");
-  const icons  = { download:"⬇", complete:"✓", waiting:"⏳", warn:"⚠", error:"✕" };
 
-  iconEl.textContent = icons[kind] || "○";
-  iconEl.className   = kind === "waiting" ? "spin" : "";
-  labEl.textContent  = label;
-  labEl.style.color  =
-    kind === "complete" ? "var(--success)"
-    : kind === "error"  ? "var(--danger)"
-    : kind === "warn"   ? "var(--warning)"
-    : "var(--cyan)";
-
-  document.getElementById("mode-tag").textContent = strategyName;
-  const an = document.getElementById("attempt-num").textContent;
-  document.getElementById("attempt-inline").textContent =
-    an && an !== "—" ? `Attempt ${an}` : "—";
-}
 
 function setStripState(s) {
   const el = document.getElementById("session-strip");
   el.className = s; // active | done | fail | ""
 }
 
-function onFinished(success) {
+function applyCompletedUi(payload) {
+  // payload must be the verified finished event object with filePath
+  const filePath = (payload && payload.filePath) || "";
+  const fileName = (payload && payload.fileName) || "";
+  const strat = lastStrategyName || currentEngine || "auto";
+
   isRunning = false;
-  unlockUI();
+  isPaused = false;
+  downloadCompleted = true;
+  currentPhase = "complete";
+  lastCompletedFilePath = filePath || "";
+
+  const bar = document.getElementById("progress-bar");
+  const wrap = document.getElementById("progress-bar-wrap");
+  bar.classList.remove("indeterminate");
+  wrap.classList.remove("glowing");
+
+  setPhaseUi("complete", "COMPLETED", strat);
+  setStripState("done");
+  setProgress(100);
+
+  updateStat("s-speed", "Completed");
+  updateStat("s-eta",   "Done");
+  updateStat("s-pct",   "100%");
+
+  const displayName = fileName || formatDisplayFilename(filePath) || "—";
+  updateSessionFile("File", displayName, filePath);
+  setStatus("Download completed", "ok");
+
+  document.getElementById("url-input").disabled = false;
+  if (currentEngine === "yt-dlp") setEngineBadge("yt-dlp", "OK");
+  else setEngineBadge(strat, "OK");
+
+  const savedLabel = filePath ? `Saved → ${filePath}` : (fileName ? `Saved → ${fileName}` : "Download completed");
+  const banner = document.getElementById("completion-banner");
+  banner.classList.remove("ok", "err", "warn");
+  banner.classList.add("show", "ok");
+  document.getElementById("completion-icon").textContent = "✓";
+  document.getElementById("completion-text").textContent = savedLabel;
+  spawnParticleBurst("#00E87A");
+
+  syncButtons();
+}
+
+function applyFailedUi(payload) {
+  isRunning = false;
+  isPaused = false;
+  downloadCompleted = false;
+  currentPhase = "failed";
+
+  const bar = document.getElementById("progress-bar");
+  const wrap = document.getElementById("progress-bar-wrap");
+  bar.classList.remove("indeterminate");
+  wrap.classList.remove("glowing");
+
+  setPhaseUi("error", "FAILED", lastStrategyName || currentEngine || "auto");
+  setStripState("fail");
+  const msg = (payload && payload.message) || "Download failed";
+  setStatus(msg, "err");
+  document.getElementById("url-input").disabled = false;
+
   const banner = document.getElementById("completion-banner");
   banner.classList.remove("ok", "err");
+  banner.classList.add("show", "err");
+  document.getElementById("completion-icon").textContent = "✕";
+  document.getElementById("completion-text").textContent = msg;
 
-  if (success) {
-    setProgress(100);
-    setPhaseUi("complete", "COMPLETE", lastStrategyName || "Default");
-    setStripState("done");
-    banner.classList.add("show", "ok");
-    document.getElementById("completion-icon").textContent = "✓";
-    document.getElementById("completion-text").textContent = `Saved → ${downloadsDir}`;
-    spawnParticleBurst("#00E87A");
-    showDialog("Download Complete", `File saved to:\n${downloadsDir}`, [{ label:"OK" }]);
-  } else {
-    banner.classList.add("show", "err");
-    document.getElementById("completion-icon").textContent = "✕";
-    document.getElementById("completion-text").textContent =
-      "Finished with errors — check the event log";
-    setStripState("fail");
+  setEngineBadge(currentEngine || "auto", "ERROR");
+  syncButtons();
+}
+
+function showYoutubeVerificationModal(payload = {}) {
+  if (youtubeVerificationDialogOpen) return;
+  youtubeVerificationDialogOpen = true;
+  isRunning = false;
+  isPaused = false;
+  currentPhase = "failed";
+  document.getElementById("url-input").disabled = false;
+  setEngineBadge(currentEngine || "yt-dlp", "ERROR");
+  setStatus("YouTube verification required", "warn");
+  syncButtons();
+
+  showDialog(
+    "YouTube verification required",
+    "YouTube requires browser verification for this video. Open YouTube in your browser, make sure the video plays while signed in, then return and retry with browser cookies. Cookies are not stored by this app; they are passed directly to yt-dlp for this download attempt.",
+    [
+      {
+        label: "Open YouTube",
+        primary: true,
+        keepOpen: true,
+        action: async () => {
+          try {
+            await invoke("open_youtube");
+          } catch (err) {
+            showDownloadStartError("Open YouTube failed", err);
+          }
+        }
+      },
+      {
+        label: "Retry with Chrome cookies",
+        primary: false,
+        action: async () => {
+          youtubeVerificationDialogOpen = false;
+          await onDownload("chrome");
+        }
+      },
+      {
+        label: "Retry with Edge cookies",
+        primary: false,
+        action: async () => {
+          youtubeVerificationDialogOpen = false;
+          await onDownload("edge");
+        }
+      },
+      {
+        label: "Cancel",
+        primary: false,
+        action: () => {
+          youtubeVerificationDialogOpen = false;
+        }
+      }
+    ]
+  );
+}
+
+function onFinished(payload) {
+  if (lockFinalState) return;
+
+  // Reject boolean payloads (old-format compatibility guard)
+  if (!payload || typeof payload !== "object") {
+    lockFinalState = true;
+    applyFailedUi({ message: "Invalid final download result" });
+    return;
+  }
+
+  const downloadId = payload.downloadId || "";
+  if (!downloadId || (currentDownloadId && downloadId !== currentDownloadId)) return;
+
+  lockFinalState = true;
+
+  const status = String(payload.status || "").toLowerCase();
+
+  if (status === "completed" && payload.success === true) {
+    if (!payload.filePath) {
+      applyFailedUi({ message: "Download finished but no verified output file was returned." });
+      return;
+    }
+    applyCompletedUi(payload);
+    return;
+  }
+
+  if (status === "already_exists") {
+    applyAlreadyExistsUi(payload.message || "File already exists. No new download was made.");
+    return;
+  }
+
+  if (status === "cancelled" || status === "canceled") {
+    applyCancelledUi(payload.message || "Download cancelled");
+    return;
+  }
+
+  if (status === "paused") {
+    setPausedState(true);
+    setPhaseUi("warn", "PAUSED", lastStrategyName || currentEngine || "auto");
+    setStatus(payload.message || "Download paused", "warn");
+    lockFinalState = false; // paused is not final — allow resume
+    return;
+  }
+
+  if (status === "youtube_cookie_required") {
+    showYoutubeVerificationModal(payload);
+    return;
+  }
+
+  applyFailedUi(payload);
+}
+
+
+
+function applyAlreadyExistsUi(message) {
+  isRunning = false;
+  isPaused = false;
+  downloadCompleted = false;
+  currentPhase = "already_exists";
+
+  const bar = document.getElementById("progress-bar");
+  const wrap = document.getElementById("progress-bar-wrap");
+  bar.classList.remove("indeterminate");
+  wrap.classList.remove("glowing");
+
+  const msg = message || "File already exists. No new download was made.";
+  setPhaseUi("warn", "FILE EXISTS", lastStrategyName || currentEngine || "auto");
+  setStripState("fail");
+  setStatus(msg, "warn");
+  document.getElementById("url-input").disabled = false;
+
+  const banner = document.getElementById("completion-banner");
+  banner.classList.remove("ok", "err", "warn");
+  banner.classList.add("show", "warn");
+  document.getElementById("completion-icon").textContent = "!";
+  document.getElementById("completion-text").textContent = msg;
+
+  setEngineBadge(currentEngine || "auto", "OK");
+  syncButtons();
+}
+
+function applyCancelledUi(message) {
+  isRunning = false;
+  isPaused = false;
+  downloadCompleted = false;
+  currentPhase = "canceled";
+
+  const bar = document.getElementById("progress-bar");
+  const wrap = document.getElementById("progress-bar-wrap");
+  bar.classList.remove("indeterminate");
+  wrap.classList.remove("glowing");
+
+  const msg = message || "Download cancelled";
+  setPhaseUi("warn", "CANCELLED", lastStrategyName || currentEngine || "auto");
+  setStripState("fail");
+  setStatus(msg, "err");
+  document.getElementById("url-input").disabled = false;
+
+  const banner = document.getElementById("completion-banner");
+  banner.classList.remove("ok", "err");
+  banner.classList.add("show", "err");
+  document.getElementById("completion-icon").textContent = "✕";
+  document.getElementById("completion-text").textContent = msg;
+
+  setEngineBadge(currentEngine || "auto", "OK");
+  syncButtons();
+}
+
+function showAboutDialog() {
+  showDialog(
+    "About Aria2 Download Manager",
+    "Aria2 Download Manager v1.0.1\n\nA lightweight, ultra-fast download manager powered by Aria2, yt-dlp, and FFmpeg.\n\nLicensing & Compliance:\n• Aria2 is licensed under the GNU GPL v2.\n• yt-dlp is licensed under the Unlicense.\n• FFmpeg and FFprobe are licensed under the GNU LGPL v2.1 or GPL v2 (depending on options and configurations used). Learn more at https://ffmpeg.org.\n\nThis application bundles clean pre-compiled LGPL binaries of FFmpeg and FFprobe to enable high-quality video and audio merging without system-wide installations. \n\nFor support, issues, or contributions, please visit the GitHub repository:\nhttps://github.com/QX-MODERATOR/Aria2-Download-Manager\n\n© 2026 Mohammad. All rights reserved.",
+    [{ label: "Close", primary: true }]
+  );
+}
+
+async function pickFfmpegExecutable() {
+  return new Promise((resolve) => {
+    const inp = document.getElementById("ffmpeg-file-input");
+    if (!inp) {
+      resolve(false);
+      return;
+    }
+    inp.value = "";
+    inp.onchange = async () => {
+      const file = inp.files && inp.files[0];
+      if (!file) {
+        resolve(false);
+        return;
+      }
+      const filePath = file.path || file.name;
+      try {
+        await invoke("set_ffmpeg_path", { path: filePath });
+        await refreshFfmpegUi();
+        resolve(true);
+      } catch (err) {
+        showDialog("FFmpeg invalid", String(err), [{ label: "OK", primary: true }]);
+        resolve(false);
+      }
+    };
+    inp.click();
+  });
+}
+
+function getFolderFromPath(path) {
+  if (!path) return "";
+  const normalized = path.replace(/\\/g, "/");
+  const idx = normalized.lastIndexOf("/");
+  if (idx <= 0) return path;
+  return path.slice(0, idx);
+}
+
+async function onOpenFolder() {
+  const folderPath = lastCompletedFilePath
+    ? getFolderFromPath(lastCompletedFilePath)
+    : downloadsDir;
+  if (!folderPath) return;
+  try {
+    await invoke("open_download_folder", { path: folderPath });
+  } catch (err) {
+    setStatus(`Could not open folder: ${formatError(err)}`, "err");
   }
 }
 
@@ -1537,12 +2862,13 @@ function onFinished(success) {
 ═══════════════════════════════════════════════════════════════════════ */
 function setProgress(pct) {
   const n = Math.min(100, Math.max(0, Number(pct) || 0));
+  const label = formatPctValue(n);
   const bar = document.getElementById("progress-bar");
   bar.classList.remove("indeterminate");
   bar.style.width = n + "%";
   if (n > 0) bar.classList.add("has-progress"); else bar.classList.remove("has-progress");
-  document.getElementById("pct-label").textContent = n + "%";
-  document.getElementById("s-pct").textContent     = n + "%";
+  document.getElementById("pct-label").textContent = label;
+  document.getElementById("s-pct").textContent     = label;
   document.getElementById("pct-label").style.color =
     n === 100 ? "var(--success)" : "var(--accent)";
 }
@@ -1572,333 +2898,9 @@ function setStatus(text, kind = "idle") {
   el.className   = kind;
 }
 
-// ── Event Log (structured) ───────────────────────────────────────────
 function ts() {
   const d = new Date();
   return `${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}:${String(d.getSeconds()).padStart(2,"0")}`;
-}
-
-function onEventLog(payload) {
-  if (!payload || !payload.type) return;
-  const entry = {
-    id: payload.id || `${Date.now()}-${Math.random().toString(16).slice(2)}`,
-    timestamp: payload.timestamp || ts(),
-    type: payload.type,
-    category: payload.category || "info",
-    title: payload.title || "",
-    details: payload.details || "",
-    updateKey: payload.updateKey || null,
-    group: payload.group || null,
-  };
-
-  if (entry.updateKey && logUpdateKeyMap.has(entry.updateKey)) {
-    const existingId = logUpdateKeyMap.get(entry.updateKey);
-    const existing = logEntryMap.get(existingId);
-    if (existing) {
-      // Patch in-place — do NOT add a new entry
-      existing.timestamp = entry.timestamp;
-      existing.type      = entry.type;
-      existing.category  = entry.category;
-      existing.title     = entry.title;
-      existing.details   = entry.details;
-      existing.group     = entry.group;
-      // Mark only this entry dirty so only its row gets patched
-      dirtyRows.add(existingId);
-      queueLogRender();
-      return;
-    }
-  }
-
-  addLogEntry(entry);
-}
-
-function addLogEntry(entry) {
-  entry.appear = true;
-  logEntries.push(entry);
-  logEntryMap.set(entry.id, entry);
-  if (entry.updateKey) logUpdateKeyMap.set(entry.updateKey, entry.id);
-  dirtyRows.add(entry.id);
-
-  if (logEntries.length > MAX_LOG_LINES) {
-    const removed = logEntries.shift();
-    if (removed) {
-      logEntryMap.delete(removed.id);
-      dirtyRows.delete(removed.id);
-      if (removed.updateKey && logUpdateKeyMap.get(removed.updateKey) === removed.id)
-        logUpdateKeyMap.delete(removed.updateKey);
-      // Recycle DOM node to pool
-      const el = rowElementMap.get(removed.id);
-      if (el) { rowElementMap.delete(removed.id); el._boundId = null; _visiblePool.push(el); }
-    }
-  }
-  queueLogRender();
-}
-
-function clearLog() {
-  logEntries = [];
-  logEntryMap.clear();
-  logUpdateKeyMap.clear();
-  dirtyRows.clear();
-  rowElementMap.clear();
-  _visiblePool.length = 0;
-  _lastStartIndex = -1;
-  _lastEndIndex   = -1;
-  logPinnedToBottom = true;
-  // Hard clear the DOM — only permitted on CLEAR action
-  const rows = document.getElementById("log-rows");
-  if (rows) rows.textContent = "";
-  queueLogRender(true);
-}
-
-function queueLogRender(force = false) {
-  if (logRenderQueued && !force) return;
-  logRenderQueued = true;
-  requestAnimationFrame(() => {
-    logRenderQueued = false;
-    // Skip render entirely if nothing is dirty and the viewport hasn't moved
-    if (!force && dirtyRows.size === 0 && _lastStartIndex >= 0) {
-      _dbg.skipped++;
-      return;
-    }
-    renderLogVirtual(force);
-  });
-}
-
-function renderLogVirtual(force) {
-  _dbg.renders++;
-  const log      = document.getElementById("log");
-  const spacer   = document.getElementById("log-spacer");
-  const rowsEl   = document.getElementById("log-rows");
-
-  const total = logEntries.length;
-  document.getElementById("log-count").textContent = String(total);
-  log.classList.toggle("empty", total === 0);
-
-  const atBottom = log.scrollHeight - log.scrollTop <= log.clientHeight + 30;
-  if (atBottom) logPinnedToBottom = true;
-
-  // Update virtual height
-  const newHeight = `${total * LOG_ROW_HEIGHT}px`;
-  if (spacer.style.height !== newHeight) spacer.style.height = newHeight;
-
-  // Compute visible window
-  const scrollTop     = log.scrollTop;
-  const startIndex    = Math.max(0, Math.floor(scrollTop / LOG_ROW_HEIGHT) - LOG_OVERSCAN);
-  const visibleCount  = Math.ceil((log.clientHeight || 200) / LOG_ROW_HEIGHT) + LOG_OVERSCAN * 2;
-  const endIndex      = Math.min(total, startIndex + visibleCount);
-
-  const windowChanged = startIndex !== _lastStartIndex || endIndex !== _lastEndIndex;
-
-  if (!windowChanged && !force && dirtyRows.size > 0) {
-    // Window is stable — only patch dirty rows that are currently visible
-    patchDirtyVisible(startIndex, endIndex);
-    dirtyRows.clear();
-  } else if (windowChanged || force) {
-    // Viewport shifted — reposition/rebind visible rows incrementally
-    repositionVisibleRows(rowsEl, startIndex, endIndex);
-    _lastStartIndex = startIndex;
-    _lastEndIndex   = endIndex;
-    dirtyRows.clear();
-  }
-
-  // Auto-scroll
-  if (logPinnedToBottom) {
-    log.scrollTop = log.scrollHeight;
-  }
-
-  if (LOG_DEBUG) {
-    console.debug("[LogRenderer]", _dbg, {startIndex, endIndex, dirty: dirtyRows.size});
-  }
-}
-
-/**
- * Patch only the dirty rows that are within the current visible window.
- * Does NOT touch any other row.
- */
-function patchDirtyVisible(startIndex, endIndex) {
-  for (const id of dirtyRows) {
-    const el = rowElementMap.get(id);
-    if (!el) continue; // not rendered yet — repositionVisibleRows will handle it
-    const idx = logEntries.findIndex(e => e.id === id);
-    if (idx < startIndex || idx >= endIndex) continue; // off-screen
-    const entry    = logEntries[idx];
-    const prevEntry = logEntries[idx - 1];
-    patchRowContent(el, entry, prevEntry);
-    _dbg.patched++;
-  }
-}
-
-/**
- * Incrementally reconcile visible rows:
- *  - rows that stay bound to the same entry: skip (unless dirty)
- *  - rows scrolling into view: rebind from pool or create
- *  - rows scrolling out of view: return to pool
- */
-function repositionVisibleRows(rowsEl, startIndex, endIndex) {
-  const prevStart = _lastStartIndex;
-  const prevEnd   = _lastEndIndex;
-
-  // Collect row elements that are leaving the viewport → recycle
-  if (prevStart >= 0) {
-    for (let i = prevStart; i < prevEnd; i++) {
-      if (i < startIndex || i >= endIndex) {
-        // This slot is leaving the viewport
-        const entry = logEntries[i];
-        if (!entry) continue;
-        const el = rowElementMap.get(entry.id);
-        if (el && el.parentNode === rowsEl) {
-          rowsEl.removeChild(el);
-          el._boundId = null;
-          _visiblePool.push(el);
-          rowElementMap.delete(entry.id);
-          _dbg.reused++;
-        }
-      }
-    }
-  }
-
-  // Render all visible slots
-  for (let i = startIndex; i < endIndex; i++) {
-    const entry     = logEntries[i];
-    const prevEntry = logEntries[i - 1];
-    if (!entry) continue;
-
-    let el = rowElementMap.get(entry.id);
-    const isDirty = dirtyRows.has(entry.id);
-
-    if (el) {
-      // Already bound — only patch if dirty
-      if (isDirty) {
-        patchRowContent(el, entry, prevEntry);
-        _dbg.patched++;
-      }
-      // Reposition without DOM removal/insertion
-      const newTransform = `translateY(${i * LOG_ROW_HEIGHT}px)`;
-      if (el.style.transform !== newTransform) el.style.transform = newTransform;
-    } else {
-      // Need to bind an element to this entry
-      el = acquireRow(rowsEl);
-      rowElementMap.set(entry.id, el);
-      el._boundId = entry.id;
-      patchRowContent(el, entry, prevEntry);
-      el.style.transform = `translateY(${i * LOG_ROW_HEIGHT}px)`;
-      rowsEl.appendChild(el);
-      _dbg.created++;
-    }
-  }
-}
-
-/**
- * Get a recycled DOM node or create a fresh one.
- */
-function acquireRow(rowsEl) {
-  if (_visiblePool.length > 0) {
-    _dbg.reused++;
-    return _visiblePool.pop();
-  }
-  _dbg.created++;
-  return makeLogRow();
-}
-
-/**
- * Patch an existing row's text/classes without rebuilding the node.
- * This is the ONLY place row content is written.
- */
-function patchRowContent(row, entry, prevEntry) {
-  if (!entry) return;
-  const tsEl      = row.children[0];
-  const iconEl    = row.children[1];
-  const body      = row.children[2];
-  const groupEl   = body.children[0];
-  const titleEl   = body.children[1];
-  const detailsEl = body.children[2];
-
-  const isGroupStart = entry.group && (!prevEntry || prevEntry.group !== entry.group);
-
-  // Patch text only if changed — avoids redundant layout
-  if (tsEl.textContent      !== entry.timestamp)                tsEl.textContent      = entry.timestamp;
-  const icon = iconForType(entry.type);
-  if (iconEl.textContent    !== icon)                           iconEl.textContent    = icon;
-  const grp = isGroupStart ? entry.group : "";
-  if (groupEl.textContent   !== grp)                            groupEl.textContent   = grp;
-  if (titleEl.textContent   !== entry.title)                    titleEl.textContent   = entry.title;
-  const det = entry.details ? ` ${entry.details}` : "";
-  if (detailsEl.textContent !== det)                            detailsEl.textContent = det;
-
-  // Patch className
-  const cls = `log-row cat-${entry.category}`
-    + (logIsCompact  ? " compact"     : "")
-    + (entry.group   ? " grouped"     : "")
-    + (isGroupStart  ? " group-start" : "")
-    + (entry.appear  ? " appear"      : "");
-  if (row.className !== cls) row.className = cls;
-  entry.appear = false;
-}
-
-function makeLogRow() {
-  const row = document.createElement("div");
-  row.className = "log-row";
-  row.style.cssText = "contain:content;will-change:transform;position:absolute;left:0;right:0;";
-
-  const tsEl = document.createElement("span");
-  tsEl.className = "log-ts";
-
-  const iconEl = document.createElement("span");
-  iconEl.className = "log-icon";
-
-  const body = document.createElement("div");
-  const groupEl   = document.createElement("span"); groupEl.className   = "log-group";
-  const titleEl   = document.createElement("span"); titleEl.className   = "log-title";
-  const detailsEl = document.createElement("span"); detailsEl.className = "log-details";
-  body.appendChild(groupEl);
-  body.appendChild(titleEl);
-  body.appendChild(detailsEl);
-
-  row.appendChild(tsEl);
-  row.appendChild(iconEl);
-  row.appendChild(body);
-  return row;
-}
-
-function iconForType(type) {
-  switch (type) {
-    case "DOWNLOAD_STARTED":    return "↓";
-    case "DOWNLOAD_PROGRESS":   return "↓";
-    case "DOWNLOAD_RESUMED":    return "▶";
-    case "DOWNLOAD_PAUSED":     return "‖";
-    case "CONNECTION_CHANGED":  return "⇄";
-    case "SPEED_CHANGED":       return "⚡";
-    case "FILE_ALLOCATED":      return "🗂";
-    case "CHECKSUM_OK":         return "✓";
-    case "DOWNLOAD_COMPLETED":  return "✓";
-    case "DOWNLOAD_FAILED":     return "✖";
-    case "RETRYING":            return "⟳";
-    case "METADATA_UPDATED":    return "ℹ";
-    default:                    return "•";
-  }
-}
-
-function initLogUi() {
-  const log = document.getElementById("log");
-  const toggle = document.getElementById("log-compact-toggle");
-  log.addEventListener("scroll", () => {
-    const atBottom = log.scrollHeight - log.scrollTop <= log.clientHeight + 30;
-    logPinnedToBottom = atBottom;
-    // Invalidate cached window so repositionVisibleRows runs on next frame
-    _lastStartIndex = -1;
-    _lastEndIndex   = -1;
-    queueLogRender();
-  });
-  toggle.addEventListener("click", () => {
-    logIsCompact = !logIsCompact;
-    toggle.setAttribute("aria-pressed", logIsCompact ? "true" : "false");
-    log.classList.toggle("compact", logIsCompact);
-    // Compact toggle changes all rows — mark all visible dirty
-    _lastStartIndex = -1;
-    _lastEndIndex   = -1;
-    queueLogRender(true);
-  });
-  queueLogRender(true);
 }
 
 // ── Particles (success burst) ────────────────────────────────────────
@@ -1925,13 +2927,16 @@ function spawnParticleBurst(color) {
 
 // ── Reset ────────────────────────────────────────────────────────────
 function resetUI() {
-  document.getElementById("completion-banner").classList.remove("show", "ok", "err");
+  downloadCompleted = false;
+  document.getElementById("completion-banner").classList.remove("show", "ok", "err", "warn");
   const bar = document.getElementById("progress-bar");
   bar.classList.remove("indeterminate", "has-progress");
   document.getElementById("progress-bar-wrap").classList.remove("glowing");
   lastStrategyName = null;
-  clearLog();
-  setPhaseUi("waiting", "STARTING", "Default");
+  lastProgressDisplay = { speed: "—", eta: "—", downloaded: "—", total: "—", pct: 0 };
+  lastEtaStableMs = 0;
+  currentPhase = "idle";
+  setPhaseUi("waiting", "STARTING", "auto");
   setStripState("active");
   setProgress(0);
   speedHistory.fill(0);
@@ -1941,19 +2946,72 @@ function resetUI() {
   });
   document.getElementById("s-pct").textContent = "0%";
   document.getElementById("attempt-num").textContent = "—";
-  document.getElementById("attempt-inline").textContent = "—";
-  document.getElementById("fname-display").textContent = "—";
+  document.getElementById("attempt-inline").textContent = "Starting…";
+
+  const fnEl = document.getElementById("fname-display");
+  fnEl.textContent = "Resolving…";
+  fnEl.title = "";
+  document.getElementById("current-file").childNodes[0].textContent = "Status: ";
+
+  // Reset engine card based on current URL
+  const url = document.getElementById("url-input").value.trim();
+  const { engine, reason } = detectEngineFromUrl(url);
   const badge = document.getElementById("strat-badge");
-  badge.textContent = "Default";
-  badge.className   = "badge";
-  document.getElementById("strat-desc").textContent = "Standard aria2 — no custom headers";
-  document.getElementById("mode-tag").textContent = "Default";
+  badge.textContent = engine;
+  badge.className = `badge engine-${engine === "yt-dlp" ? "ytdlp" : engine}`;
+  document.getElementById("strat-desc").textContent = reason;
+  document.getElementById("mode-tag").textContent = engine;
 }
 
+function clearUi() {
+  if (isRunning || isPaused || currentPhase === "starting") return;
+  closeDialog();
+
+  const urlEl = document.getElementById("url-input");
+  urlEl.value = "";
+  urlEl.disabled = false;
+
+  currentDownloadId = "";
+  lockFinalState = false;
+  lastCompletedFilePath = "";
+  downloadCompleted = false;
+  isRunning = false;
+  isPaused = false;
+  currentPhase = "idle";
+  lastStrategyName = null;
+  lastProgressDisplay = { speed: "-", eta: "-", downloaded: "-", total: "-", pct: 0 };
+  lastEtaStableMs = 0;
+  speedHistory.fill(0);
+  speedRawKbs = 0;
+
+  const banner = document.getElementById("completion-banner");
+  banner.classList.remove("show", "ok", "err", "warn");
+  document.getElementById("completion-text").textContent = "";
+
+  const bar = document.getElementById("progress-bar");
+  bar.classList.remove("indeterminate", "has-progress");
+  bar.style.width = "0%";
+  document.getElementById("progress-bar-wrap").classList.remove("glowing");
+  document.getElementById("pct-label").textContent = "0%";
+
+  updateSparkline();
+  ["s-speed", "s-eta", "s-dl", "s-total"].forEach(id => {
+    document.getElementById(id).textContent = "-";
+  });
+  document.getElementById("s-pct").textContent = "0%";
+  document.getElementById("attempt-num").textContent = "-";
+  document.getElementById("attempt-inline").textContent = "Ready";
+
+  setEnginePreview("auto", "Engine will be selected automatically");
+  setPhaseUi("waiting", "IDLE", "auto");
+  setStripState("");
+  updateSessionFile("Status", "Waiting for URL...", "");
+  setStatus("Ready - paste a URL to begin", "idle");
+  setPausedState(false);
+  syncButtons();
+}
 function unlockUI() {
-  document.getElementById("btn-dl").disabled    = false;
-  document.getElementById("btn-stop").disabled  = true;
-  document.getElementById("url-input").disabled = false;
+  setRunningState(false);
   setStripState("");
 }
 
@@ -1975,7 +3033,10 @@ function showDialog(title, body, buttons) {
     const el = document.createElement("button");
     el.textContent = btn.label;
     if (!btn.primary) el.classList.add("secondary");
-    el.onclick = async () => { closeDialog(); if (btn.action) await btn.action(); };
+    el.onclick = async () => {
+      if (!btn.keepOpen) closeDialog();
+      if (btn.action) await btn.action();
+    };
     btnsEl.appendChild(el);
   });
   document.getElementById("dialog-overlay").classList.add("open");
@@ -1985,25 +3046,170 @@ function closeDialog() {
 }
 
 // ── Enter key ────────────────────────────────────────────────────────
-document.getElementById("url-input").addEventListener("keydown", e => {
-  if (e.key === "Enter") onDownload();
+document.body.addEventListener("click", e => {
+  if (e.target.tagName !== "BUTTON" && e.target.tagName !== "INPUT") {
+    // focus management
+  }
 });
 
-// ── 3D tilt on cards ─────────────────────────────────────────────────
-document.querySelectorAll(".card, .stat-box").forEach(card => {
-  card.addEventListener("mousemove", e => {
-    const r = card.getBoundingClientRect();
-    const x = ((e.clientX - r.left) / r.width  - 0.5) * 8;
-    const y = ((e.clientY - r.top)  / r.height - 0.5) * 8;
-    card.style.transform = `perspective(600px) rotateX(${-y}deg) rotateY(${x}deg) translateZ(4px)`;
-  });
-  card.addEventListener("mouseleave", () => {
-    card.style.transform = "";
-  });
+const urlInp = document.getElementById("url-input");
+urlInp.addEventListener("input", () => {
+  updateEnginePreview();
+  syncButtons();
 });
+urlInp.addEventListener("keydown", e => {
+  if (e.key === "Enter" && !document.getElementById("btn-dl").disabled) {
+    onDownload();
+  }
+});
+
+/* ── setEngineBadge (header badge) ─────────────────────────────────────── */
+function setEngineBadge(engine, state = "OK") {
+  const badge = document.getElementById("aria2-badge");
+  badge.style.animation = "";
+  if (state === "ACTIVE") {
+    badge.textContent = `● ${engine.toUpperCase()} ACTIVE`;
+    badge.className = "ok";
+    badge.style.animation = "badge-breathe 1.5s ease-in-out infinite";
+  } else if (state === "ERROR") {
+    badge.textContent = "● ENGINE ERROR";
+    badge.className = "err";
+  } else if (state === "MISSING") {
+    badge.textContent = `● ${engine.toUpperCase()} MISSING`;
+    badge.className = "err";
+  } else {
+    badge.textContent = `● ${engine.toUpperCase()} OK`;
+    badge.className = "ok";
+  }
+}
+
+function setPhaseUi(kind, label, strategyName) {
+  const iconEl = document.getElementById("phase-icon");
+  const labEl  = document.getElementById("phase-label");
+  const icons  = { download:"⬇", complete:"✓", waiting:"⏳", warn:"⚠", error:"✕" };
+
+  if (label === "MERGING" || label === "POST_PROCESSING") icons.waiting = "🔗";
+  if (label === "CONVERTING") icons.waiting = "🎧";
+  if (label === "EXTRACTING" || label === "EXTRACTING_INFO") icons.waiting = "🔍";
+
+  iconEl.textContent = icons[kind] || "○";
+  iconEl.className   = kind === "waiting" ? "spin" : "";
+  labEl.textContent  = label;
+  labEl.style.color  =
+    kind === "complete" ? "var(--success)"
+    : kind === "error"  ? "var(--danger)"
+    : kind === "warn"   ? "var(--warning)"
+    : "var(--cyan)";
+
+  document.getElementById("mode-tag").textContent = strategyName;
+}
+
+let _urlDebounceTimer = null;
+document.getElementById("url-input").addEventListener("input", e => {
+  clearTimeout(_urlDebounceTimer);
+  _urlDebounceTimer = setTimeout(() => {
+    if (isRunning) return;
+    const url = e.target.value.trim();
+    const { engine, reason } = detectEngineFromUrl(url);
+    setEnginePreview(engine, reason);
+  }, 120);
+});
+
+// Quality helper update on change
+document.getElementById("quality-select").addEventListener("change", () => {
+  const qSel = document.getElementById("quality-select");
+  if (!ffmpegAvailable && QUALITIES_REQUIRE_FFMPEG.has(qSel.value)) {
+    qSel.value = "best_single_mp4";
+  } else if (ffmpegAvailable && QUALITIES_NO_FFMPEG.has(qSel.value)) {
+    qSel.value = "best";
+  }
+  updateQualityHelper();
+});
+
+document.getElementById("btn-open-folder")?.addEventListener("click", () => onOpenFolder());
+document.getElementById("btn-clear-ui")?.addEventListener("click", () => clearUi());
+
+// 3D tilt removed for layout stability
+
+/* ── Custom title bar (window controls) ────────────────────────────────── */
+function initTitleBar() {
+  const titlebar = document.getElementById("custom-titlebar");
+  const btnMin   = document.getElementById("titlebar-minimize");
+  const btnMax   = document.getElementById("titlebar-maximize");
+  const btnClose = document.getElementById("titlebar-close");
+  if (!titlebar || !btnMin || !btnMax || !btnClose) return;
+
+  const getWin = window.__TAURI__?.window?.getCurrentWindow;
+  if (!getWin) {
+    titlebar.style.display = "none";
+    return;
+  }
+
+  let appWindow;
+  try {
+    appWindow = getWin();
+  } catch (_) {
+    titlebar.style.display = "none";
+    return;
+  }
+
+  async function syncMaximizeButton() {
+    try {
+      const maximized = await appWindow.isMaximized();
+      btnMax.textContent = maximized ? "❐" : "□";
+      btnMax.classList.toggle("is-maximized", maximized);
+      btnMax.title = maximized ? "Restore" : "Maximize";
+      btnMax.setAttribute("aria-label", maximized ? "Restore" : "Maximize");
+    } catch (_) { /* ignore */ }
+  }
+
+  btnMin.addEventListener("click", (e) => {
+    e.stopPropagation();
+    appWindow.minimize().catch(console.error);
+  });
+
+  btnMax.addEventListener("click", async (e) => {
+    e.stopPropagation();
+    try {
+      await appWindow.toggleMaximize();
+      await syncMaximizeButton();
+    } catch (err) {
+      console.error(err);
+    }
+  });
+
+  btnClose.addEventListener("click", (e) => {
+    e.stopPropagation();
+    appWindow.close().catch(console.error);
+  });
+
+  function isTitlebarControl(target) {
+    return Boolean(target.closest(".titlebar-controls, .titlebar-btn"));
+  }
+
+  titlebar.addEventListener("mousedown", (e) => {
+    if (e.button !== 0 || isTitlebarControl(e.target)) return;
+    if (e.detail > 1) return;
+    appWindow.startDragging?.().catch(() => {});
+  });
+
+  titlebar.addEventListener("dblclick", async (e) => {
+    if (isTitlebarControl(e.target)) return;
+    e.preventDefault();
+    e.stopPropagation();
+    try {
+      await appWindow.toggleMaximize();
+      await syncMaximizeButton();
+    } catch (err) {
+      console.error(err);
+    }
+  });
+  appWindow.onResized(() => syncMaximizeButton()).catch(() => {});
+  syncMaximizeButton();
+}
 
 // ── Boot ──────────────────────────────────────────────────────────────
-initLogUi();
+initTitleBar();
 init().catch(console.error);
 </script>
 </body>

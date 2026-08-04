@@ -75,3 +75,7 @@ $RECYCLE.BIN/
 
 # Local-only notes
 *.local
+
+# Heavy resources/binaries
+src-tauri/resources/
+

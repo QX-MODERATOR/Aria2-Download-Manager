@@ -2,6 +2,8 @@ name: Release
 
 on:
   push:
+    branches:
+      - main
     tags:
       - "v*"
   workflow_dispatch:
@@ -16,8 +18,8 @@ on:
         default: "Aria2 Download Manager v1.0.1"
       body:
         description: "Release description"
-        required: true
-        default: "Fix Linux aria2 engine resolution and packaging."
+        required: false
+        default: ""
 
 permissions:
   contents: write
@@ -236,7 +238,8 @@ jobs:
         with:
           tag_name: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
           name: ${{ github.event_name == 'workflow_dispatch' && inputs.title || format('Aria2 Download Manager {0}', github.ref_name) }}
-          body: ${{ github.event_name == 'workflow_dispatch' && inputs.body || 'Fix Linux aria2 engine resolution and packaging.' }}
+          body: ${{ github.event_name == 'workflow_dispatch' && inputs.body || '' }}
+          generate_release_notes: ${{ github.event_name != 'workflow_dispatch' || inputs.body == '' }}
           draft: false
           prerelease: false
           fail_on_unmatched_files: true

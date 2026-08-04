@@ -34,21 +34,6 @@ impl ErrorCode {
             ErrorCode::Unknown => "unknown",
         }
     }
-
-    /// Best strategy index to start with when this error is detected.
-    pub fn preferred_strategy(&self) -> usize {
-        match self {
-            ErrorCode::Forbidden403 => 1,
-            ErrorCode::RedirectErr => 1,
-            ErrorCode::NotFound404 => 1,
-            ErrorCode::SslError => 5,
-            ErrorCode::Timeout => 4,
-            ErrorCode::Network => 4,
-            ErrorCode::Checksum => 1,
-            ErrorCode::Unknown => 1,
-            ErrorCode::None => 0,
-        }
-    }
 }
 
 // ── Pattern rules (compiled once) ────────────────────────────────────────────
@@ -133,9 +118,5 @@ impl ErrorClassifier {
             }
         }
         ErrorCode::None
-    }
-
-    pub fn reset(&mut self) {
-        self.seen.clear();
     }
 }

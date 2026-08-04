@@ -24,7 +24,17 @@ $LegacyOutputs = @(
 $MasterSize = 1024
 
 if (-not (Get-Command magick -ErrorAction SilentlyContinue)) {
-  throw 'ImageMagick `magick` was not found on PATH. Install ImageMagick or add it to PATH before building.'
+  $requiredExistingOutputs = @('icon.ico', 'icon.icns') + $TauriPngOutputs
+  $missingExistingOutputs = @($requiredExistingOutputs | Where-Object {
+    -not (Test-Path -LiteralPath (Join-Path $IconsDir $_))
+  })
+
+  if ($missingExistingOutputs.Count -eq 0) {
+    Write-Warning 'ImageMagick `magick` was not found on PATH. Reusing existing generated icons.'
+    return
+  }
+
+  throw "ImageMagick `magick` was not found on PATH, and generated icons are missing: $($missingExistingOutputs -join ', '). Install ImageMagick or add it to PATH before building."
 }
 
 New-Item -ItemType Directory -Path $IconsDir -Force | Out-Null
